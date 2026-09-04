@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 class MainActivity : ComponentActivity() {
     private lateinit var prefs: PreferencesManager
     private lateinit var subManager: SubscriptionManager
+    private val networkManager = NetworkManager()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +47,7 @@ class MainActivity : ComponentActivity() {
                     MainDashboard(
                         prefs = prefs,
                         subManager = subManager,
+                        networkManager = networkManager,
                         phone = loggedInPhone,
                         onLogout = {
                             prefs.clearSession()
@@ -63,6 +65,7 @@ class MainActivity : ComponentActivity() {
 fun MainDashboard(
     prefs: PreferencesManager,
     subManager: SubscriptionManager,
+    networkManager: NetworkManager,
     phone: String,
     onLogout: () -> Unit
 ) {
@@ -77,15 +80,25 @@ fun MainDashboard(
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
     var showPlatformDialog by remember { mutableStateOf(false) }
 
-    val allOrders = remember {
-        listOf(
-            NormalizedOrder("ORD-101", "Rapido", OrderType.RIDE, "MG Road", "Airport", 4.2, 320.0),
-            NormalizedOrder("ORD-102", "Porter", OrderType.PARCEL, "Indiranagar", "Koramangala", 3.0, 150.0),
-            NormalizedOrder("ORD-103", "Uber", OrderType.PARCEL, "Whitefield", "Electronic City", 18.5, 450.0)
-        )
+    var liveOrders by remember { mutableStateOf<List<NormalizedOrder>>(emptyList()) }
+    var isLoadingOrders by remember { mutableStateOf(false) }
+
+    // Backend API se live feed load karein
+    LaunchedEffect(Unit) {
+        isLoadingOrders = true
+        val fetched = networkManager.fetchOrders()
+        liveOrders = if (fetched.isNotEmpty()) {
+            fetched
+        } else {
+            listOf(
+                NormalizedOrder("ORD-101", "Rapido", OrderType.RIDE, "MG Road", "Airport", 4.2, 320.0),
+                NormalizedOrder("ORD-102", "Porter", OrderType.PARCEL, "Indiranagar", "Koramangala", 3.0, 150.0)
+            )
+        }
+        isLoadingOrders = false
     }
 
-    val matchedOrders = allOrders.filter { matchingEngine.isOrderMatched(it) }
+    val matchedOrders = liveOrders.filter { matchingEngine.isOrderMatched(it) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -219,11 +232,20 @@ fun MainDashboard(
 
             item {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                Text(
-                    text = "Matched Orders (${matchedOrders.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Live Orders (${matchedOrders.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (isLoadingOrders) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    }
+                }
             }
 
             items(matchedOrders) { order ->
