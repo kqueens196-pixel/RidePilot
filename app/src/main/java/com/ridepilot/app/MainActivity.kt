@@ -1,8 +1,13 @@
 package com.ridepilot.app
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selectable
@@ -11,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,10 +66,28 @@ fun MainDashboard(
     phone: String,
     onLogout: () -> Unit
 ) {
+    val context = LocalContext.current
+    val permissionManager = remember { PermissionManager(context) }
+
     var vehicle by remember { mutableStateOf(prefs.vehicle) }
     var radius by remember { mutableStateOf(prefs.radius) }
     var parcelMode by remember { mutableStateOf(prefs.parcelMode) }
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions[Manifest.permission.POST_NOTIFICATIONS] ?: false
+        } else true
+
+        if (fineLocationGranted && notifGranted) {
+            Toast.makeText(context, "All required permissions granted!", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Permissions denied. Some features may not work.", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val subStatus = subManager.status
     val daysLeft = subManager.daysRemaining
@@ -76,11 +100,8 @@ fun MainDashboard(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Subscription Card
             Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -89,20 +110,10 @@ fun MainDashboard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = planName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        AssistChip(
-                            onClick = { },
-                            label = { Text(subStatus.name) }
-                        )
+                        Text(text = planName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        AssistChip(onClick = { }, label = { Text(subStatus.name) })
                     }
-                    Text(
-                        text = "$daysLeft days remaining in current cycle",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Text(text = "$daysLeft days remaining in current cycle", style = MaterialTheme.typography.bodySmall)
                 }
             }
 
@@ -163,9 +174,26 @@ fun MainDashboard(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-            Button(onClick = { }, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = {
+                    val permissionsToRequest = mutableListOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    permissionLauncher.launch(permissionsToRequest.toTypedArray())
+
+                    if (!permissionManager.hasOverlayPermission()) {
+                        permissionManager.openOverlaySettings()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Grant Required Permissions")
             }
+
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(onClick = { }, modifier = Modifier.fillMaxWidth()) {
                 Text("Connect Platforms")
