@@ -69,7 +69,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 fun MainDashboard(
     prefs: PreferencesManager,
     subManager: SubscriptionManager,
-    phone: String, onLogout: () -> Unit
+    phone: String, onLogout: () -> Unit, onLogout: () -> Unit
 ) {
     val context = LocalContext.current
 
