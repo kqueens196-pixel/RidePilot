@@ -89,6 +89,7 @@ fun MainDashboard(
     var maxPickupKm by remember { mutableStateOf(prefs.maxPickupKm) }
 
     var showSubSheet by remember { mutableStateOf(false) }
+    var showVideoGuide by remember { mutableStateOf(false) }
     val waNum = "9347808890"
     val vehicleCategories = listOf(
         "Bike" to "🏍️",
