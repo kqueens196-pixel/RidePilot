@@ -1,39 +1,11 @@
 package com.ridepilot.app
 
-import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsBike
-import androidx.compose.material.icons.filled.LocalShipping
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.TwoWheeler
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selectable
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,110 +14,103 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
-    private val permissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             RidePilotTheme {
-                RidePilotApp(
-                    onRequestPermissions = {
-                        permissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                                Manifest.permission.POST_NOTIFICATIONS
-                            )
-                        )
-                    }
-                )
+                var isLoggedIn by remember { mutableStateOf(false) }
+                var loggedInPhone by remember { mutableStateOf("") }
+
+                if (!isLoggedIn) {
+                    LoginScreen(onLoginSuccess = { phone ->
+                        loggedInPhone = phone
+                        isLoggedIn = true
+                    })
+                } else {
+                    MainDashboard(phone = loggedInPhone, onLogout = { isLoggedIn = false })
+                }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RidePilotApp(onRequestPermissions: () -> Unit) {
-    var mode by remember { mutableStateOf("BOTH") }
+fun MainDashboard(phone: String, onLogout: () -> Unit) {
     var vehicle by remember { mutableStateOf("Bike") }
-    var radius by remember { mutableStateOf("2 KM") }
+    var radius by remember { mutableStateOf("5 KM") }
     var parcelMode by remember { mutableStateOf(true) }
     var autoAccept by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(title = {
-                Column {
-                    Text("RidePilot", fontWeight = FontWeight.Bold)
-                    Text("ONE APP. EVERY RIDE. MORE CONTROL.", style = MaterialTheme.typography.labelSmall)
-                }
-            })
-        }
-    ) { padding ->
+    AppScaffold(phone = phone, onLogout = onLogout) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(16.dp)
         ) {
-            Spacer(Modifier.height(4.dp))
-
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Launch Offer", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("₹99/month for the first 90 days")
-                    Text("First eligible ride/order FREE for eligible new users during launch.")
-                    Text("Day 91 onward: ₹150/month renewal")
-                    Text("Optional One-Day Pass: ₹10")
-                }
-            }
-
-            Text("Order Mode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("BOTH" to "Parcel + Ride", "RIDE" to "Only Ride", "PARCEL" to "Only Parcel").forEach { (key, label) ->
-                    FilterChip(selected = mode == key, onClick = { mode = key }, label = { Text(label) })
-                }
-            }
-
-            Text("Vehicle", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Vehicle Type", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Bike", "Auto", "Car", "Delivery").forEach {
-                    FilterChip(selected = vehicle == it, onClick = { vehicle = it }, label = { Text(it) })
+                    FilterChip(
+                        selected = vehicle == it,
+                        onClick = { vehicle = it },
+                        label = { Text(it) }
+                    )
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
             Text("Parcel Radius", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("1 KM", "2 KM", "5 KM", "10 KM").forEach {
-                    FilterChip(selected = radius == it, onClick = { radius = it }, label = { Text(it) })
+                    FilterChip(
+                        selected = radius == it,
+                        onClick = { radius = it },
+                        label = { Text(it) }
+                    )
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
             SettingRow("Parcel Mode", "Allow parcel matching", parcelMode) { parcelMode = it }
             SettingRow("Auto-Accept", "Only for authorized provider integrations", autoAccept) { autoAccept = it }
 
-            HorizontalDivider()
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-            Button(onClick = onRequestPermissions, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { }, modifier = Modifier.fillMaxWidth()) {
                 Text("Grant Required Permissions")
             }
-
-            OutlinedButton(
-                onClick = { },
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(onClick = { }, modifier = Modifier.fillMaxWidth()) {
                 Text("Connect Platforms")
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 "Security: RidePilot never asks for third-party passwords or OTPs. Automatic acceptance requires an official provider API/partner authorization.",
                 style = MaterialTheme.typography.bodySmall
             )
+        }
+    }
+}
 
-            Spacer(Modifier.height(24.dp))
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppScaffold(phone: String, onLogout: () -> Unit, content: @Composable () -> Unit) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("RidePilot ($phone)") },
+                actions = {
+                    TextButton(onClick = onLogout) {
+                        Text("Logout")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            content()
         }
     }
 }
@@ -158,7 +123,7 @@ private fun SettingRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        Modifier
+        modifier = Modifier
             .fillMaxWidth()
             .selectable(
                 selected = checked,
