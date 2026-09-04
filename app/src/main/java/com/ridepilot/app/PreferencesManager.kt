@@ -18,12 +18,11 @@ class PreferencesManager(context: Context) {
         get() = prefs.getString("vehicle", "Bike") ?: "Bike"
         set(value) = prefs.edit().putString("vehicle", value).apply()
 
-    // Service Mode: "Both", "Only Ride", "Only Parcel"
-    var serviceMode: String
-        get() = prefs.getString("service_mode", "Both") ?: "Both"
-        set(value) = prefs.edit().putString("service_mode", value).apply()
+    // Dedicated Individual Toggles
+    var isRideEnabled: Boolean
+        get() = prefs.getBoolean("is_ride_enabled", true)
+        set(value) = prefs.edit().putBoolean("is_ride_enabled", value).apply()
 
-    // Dedicated switches
     var isParcelEnabled: Boolean
         get() = prefs.getBoolean("is_parcel_enabled", true)
         set(value) = prefs.edit().putBoolean("is_parcel_enabled", value).apply()
@@ -32,22 +31,14 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean("combo_route_500m", true)
         set(value) = prefs.edit().putBoolean("combo_route_500m", value).apply()
 
-    // Distance Filters
+    // Pickup Radius Limits
     var maxPickupKm: Float
-        get() = prefs.getFloat("max_pickup_km", 2.0f) // default 2 KM pickup limit
+        get() = prefs.getFloat("max_pickup_km", 2.0f)
         set(value) = prefs.edit().putFloat("max_pickup_km", value).apply()
 
     var maxDropKm: Float
         get() = prefs.getFloat("max_drop_km", 10.0f)
         set(value) = prefs.edit().putFloat("max_drop_km", value).apply()
-
-    var rideRadius: String
-        get() = prefs.getString("ride_radius", "5 KM") ?: "5 KM"
-        set(value) = prefs.edit().putString("ride_radius", value).apply()
-
-    var parcelRadius: String
-        get() = prefs.getString("parcel_radius", "5 KM") ?: "5 KM"
-        set(value) = prefs.edit().putString("parcel_radius", value).apply()
 
     var autoAccept: Boolean
         get() = prefs.getBoolean("auto_accept", true)

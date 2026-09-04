@@ -75,8 +75,7 @@ fun MainDashboard(
     val permissionManager = remember { PermissionManager(context) }
     val matchingEngine = remember { OrderMatchingEngine(prefs, subManager) }
 
-    var vehicle by remember { mutableStateOf(prefs.vehicle) }
-    var serviceMode by remember { mutableStateOf(prefs.serviceMode) }
+    var isRideOn by remember { mutableStateOf(prefs.isRideEnabled) }
     var isParcelOn by remember { mutableStateOf(prefs.isParcelEnabled) }
     var isComboRouteOn by remember { mutableStateOf(prefs.isComboRouteEnabled) }
     var maxPickupKm by remember { mutableStateOf(prefs.maxPickupKm) }
@@ -92,9 +91,9 @@ fun MainDashboard(
             fetched
         } else {
             listOf(
-                NormalizedOrder("ORD-101", "Rapido", OrderType.RIDE, "Lakdikapul Metro", "Necklace Road", 2.2, 24.0),
-                NormalizedOrder("ORD-102", "Porter", OrderType.PARCEL, "Khairtabad", "Somajiguda", 1.8, 45.0),
-                NormalizedOrder("ORD-103", "Rapido", OrderType.RIDE, "Ameerpet", "Madhapur", 6.5, 95.0)
+                NormalizedOrder("ORD-101", "Rapido", OrderType.RIDE, "Lakdikapul Metro", "Necklace Road", 0.5, 24.0),
+                NormalizedOrder("ORD-102", "Porter", OrderType.PARCEL, "Khairtabad", "Somajiguda", 1.2, 45.0),
+                NormalizedOrder("ORD-103", "Rapido", OrderType.RIDE, "Ameerpet", "Madhapur", 4.5, 95.0)
             )
         }
         isLoadingOrders = false
@@ -137,24 +136,7 @@ fun MainDashboard(
                             Text(text = "Pro Fleet All-Access", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             AssistChip(onClick = { }, label = { Text("ACTIVE") })
                         }
-                        Text(text = "Auto-Accept & Same-Route Combo Active", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-
-            // Order Preference Modes
-            item {
-                Text("Service Mode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Both", "Only Ride", "Only Parcel").forEach { mode ->
-                        FilterChip(
-                            selected = serviceMode == mode,
-                            onClick = {
-                                serviceMode = mode
-                                prefs.serviceMode = mode
-                            },
-                            label = { Text(mode) }
-                        )
+                        Text(text = "Auto-Accept & Multi-App Sync Enabled", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -162,7 +144,7 @@ fun MainDashboard(
             // Pickup Distance KM Control
             item {
                 Text("Max Pickup Distance: ${"%.1f".format(maxPickupKm)} KM", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("Orders farther than this pickup distance will be ignored", style = MaterialTheme.typography.bodySmall)
+                Text("Orders with pickup farther than this will be ignored", style = MaterialTheme.typography.bodySmall)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(0.5f, 1.0f, 2.0f, 3.0f, 5.0f).forEach { km ->
                         FilterChip(
@@ -177,7 +159,7 @@ fun MainDashboard(
                 }
             }
 
-            // Toggles
+            // Dedicated ON/OFF Switches
             item {
                 SettingRow(
                     title = "⚡ Auto-Accept (Instant Tap)",
@@ -190,8 +172,18 @@ fun MainDashboard(
                 )
 
                 SettingRow(
+                    title = "🚖 Ride Orders Mode",
+                    subtitle = "Turn ON / OFF accepting passenger bike & auto rides",
+                    checked = isRideOn,
+                    onCheckedChange = {
+                        isRideOn = it
+                        prefs.isRideEnabled = it
+                    }
+                )
+
+                SettingRow(
                     title = "📦 Parcel Orders Mode",
-                    subtitle = "Turn ON/OFF receiving delivery and courier parcel orders",
+                    subtitle = "Turn ON / OFF receiving delivery & courier parcel orders",
                     checked = isParcelOn,
                     onCheckedChange = {
                         isParcelOn = it
@@ -199,18 +191,20 @@ fun MainDashboard(
                     }
                 )
 
-                SettingRow(
-                    title = "🛣️ Ride + Parcel Combo (Under 500m)",
-                    subtitle = "Auto-accepts parcel delivery if pickup is on the same route within 500m of your ride",
-                    checked = isComboRouteOn,
-                    onCheckedChange = {
-                        isComboRouteOn = it
-                        prefs.isComboRouteEnabled = it
-                    }
-                )
+                if (isRideOn && isParcelOn) {
+                    SettingRow(
+                        title = "🛣️ Ride + Parcel Combo (Under 500m)",
+                        subtitle = "Auto-accept parcel delivery if pickup falls within 500m of your ride",
+                        checked = isComboRouteOn,
+                        onCheckedChange = {
+                            isComboRouteOn = it
+                            prefs.isComboRouteEnabled = it
+                        }
+                    )
+                }
             }
 
-            // Permissions Buttons
+            // Permissions Shortcuts
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

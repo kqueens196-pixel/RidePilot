@@ -20,23 +20,11 @@ class OrderMatchingEngine(
     private val subManager: SubscriptionManager
 ) {
     fun isOrderMatched(order: NormalizedOrder): Boolean {
-        val matchesMode = when (prefs.serviceMode) {
-            "Only Ride" -> order.type == OrderType.RIDE
-            "Only Parcel" -> order.type == OrderType.PARCEL
-            else -> true
-        }
-        if (!matchesMode) return false
+        // 1. Direct Toggle Check
+        if (order.type == OrderType.RIDE && !prefs.isRideEnabled) return false
+        if (order.type == OrderType.PARCEL && !prefs.isParcelEnabled) return false
 
-        val maxAllowedKm = if (order.type == OrderType.RIDE) {
-            parseRadius(prefs.rideRadius)
-        } else {
-            parseRadius(prefs.parcelRadius)
-        }
-
-        return order.distanceKm <= maxAllowedKm
-    }
-
-    private fun parseRadius(radiusStr: String): Double {
-        return radiusStr.replace(" KM", "").trim().toDoubleOrNull() ?: 10.0
+        // 2. Max KM Filter
+        return order.distanceKm <= prefs.maxPickupKm + 5.0
     }
 }
