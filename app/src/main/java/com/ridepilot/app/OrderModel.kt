@@ -20,11 +20,23 @@ class OrderMatchingEngine(
     private val subManager: SubscriptionManager
 ) {
     fun isOrderMatched(order: NormalizedOrder): Boolean {
-        // 1. Direct Toggle Check
         if (order.type == OrderType.RIDE && !prefs.isRideEnabled) return false
         if (order.type == OrderType.PARCEL && !prefs.isParcelEnabled) return false
 
-        // 2. Max KM Filter
-        return order.distanceKm <= prefs.maxPickupKm + 5.0
+        // 🏠 GO HOME / DESTINATION MODE
+        if (prefs.isGoHomeEnabled) {
+            val destTarget = prefs.destinationAddress.trim().uppercase()
+            val orderDrop = order.dropAddress.trim().uppercase()
+
+            if (destTarget.isEmpty()) return true
+
+            val matchesDestination = orderDrop.contains(destTarget) || 
+                                     destTarget.split(" ").any { word -> word.length > 3 && orderDrop.contains(word) }
+            
+            // Destination match hone par pickup unlimited allowed hai
+            return matchesDestination
+        }
+
+        return order.distanceKm <= prefs.maxPickupKm
     }
 }

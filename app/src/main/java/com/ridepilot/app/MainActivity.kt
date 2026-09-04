@@ -2,14 +2,13 @@ package com.ridepilot.app
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,7 +32,6 @@ import androidx.compose.ui.unit.sp
 class MainActivity : ComponentActivity() {
     private lateinit var prefs: PreferencesManager
     private lateinit var subManager: SubscriptionManager
-    private val networkManager = NetworkManager()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,28 +40,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             RidePilotTheme {
-                var isLoggedIn by remember { mutableStateOf(prefs.isLoggedIn) }
-                var loggedInPhone by remember { mutableStateOf(prefs.riderPhone) }
-
-                if (!isLoggedIn) {
-                    LoginScreen(onLoginSuccess = { phone ->
-                        prefs.isLoggedIn = true
-                        prefs.riderPhone = phone
-                        loggedInPhone = phone
-                        isLoggedIn = true
-                    })
-                } else {
-                    MainDashboard(
-                        prefs = prefs,
-                        subManager = subManager,
-                        networkManager = networkManager,
-                        phone = loggedInPhone,
-                        onLogout = {
-                            prefs.clearSession()
-                            isLoggedIn = false
-                        }
-                    )
-                }
+                MainDashboard(
+                    prefs = prefs,
+                    subManager = subManager,
+                    phone = prefs.riderPhone.ifEmpty { "9876543210" }
+                )
             }
         }
     }
@@ -74,49 +55,31 @@ class MainActivity : ComponentActivity() {
 fun MainDashboard(
     prefs: PreferencesManager,
     subManager: SubscriptionManager,
-    networkManager: NetworkManager,
-    phone: String,
-    onLogout: () -> Unit
+    phone: String
 ) {
     val context = LocalContext.current
-    val permissionManager = remember { PermissionManager(context) }
-    val matchingEngine = remember { OrderMatchingEngine(prefs, subManager) }
 
+    var selectedVehicle by remember { mutableStateOf(prefs.vehicleType) }
     var isRideOn by remember { mutableStateOf(prefs.isRideEnabled) }
     var isParcelOn by remember { mutableStateOf(prefs.isParcelEnabled) }
     var isComboRouteOn by remember { mutableStateOf(prefs.isComboRouteEnabled) }
-    var maxPickupKm by remember { mutableStateOf(prefs.maxPickupKm) }
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
 
-    var liveOrders by remember { mutableStateOf<List<NormalizedOrder>>(emptyList()) }
+    // Go Home state
+    var isGoHomeOn by remember { mutableStateOf(prefs.isGoHomeEnabled) }
+    var destText by remember { mutableStateOf(prefs.destinationAddress) }
+    var destRadiusKm by remember { mutableStateOf(prefs.destinationRadiusKm) }
+    var maxPickupKm by remember { mutableStateOf(prefs.maxPickupKm) }
 
-    LaunchedEffect(Unit) {
-        val fetched = networkManager.fetchOrders()
-        liveOrders = if (fetched.isNotEmpty()) {
-            fetched
-        } else {
-            listOf(
-                NormalizedOrder("ORD-101", "Rapido", OrderType.RIDE, "Lakdikapul Metro", "Necklace Road", 0.5, 24.0),
-                NormalizedOrder("ORD-102", "Porter", OrderType.PARCEL, "Khairtabad Hub", "Somajiguda Circle", 1.2, 45.0),
-                NormalizedOrder("ORD-103", "Rapido", OrderType.RIDE, "Ameerpet Metro", "Madhapur Cyber", 4.5, 95.0)
-            )
-        }
-    }
+    val vehicleCategories = listOf(
+        "Bike" to "🏍️",
+        "Auto" to "🛺",
+        "Cab/Car" to "🚕",
+        "Mini Truck" to "🚚",
+        "Heavy Pickup" to "🚛"
+    )
 
-    val matchedOrders = liveOrders.filter { matchingEngine.isOrderMatched(it) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
-        val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions[Manifest.permission.POST_NOTIFICATIONS] ?: false
-        } else true
-
-        if (fineLocationGranted && notifGranted) {
-            Toast.makeText(context, "Permissions Active", Toast.LENGTH_SHORT).show()
-        }
-    }
+    val destRadiusOptions = listOf(1.0f, 2.0f, 3.0f, 5.0f, 8.0f, 10.0f)
 
     Scaffold(
         containerColor = Color(0xFF0D1117),
@@ -132,21 +95,18 @@ fun MainDashboard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(40.dp)
                             .clip(CircleShape)
                             .background(Brush.linearGradient(listOf(Color(0xFF00E676), Color(0xFF00B0FF)))),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("⚡", fontSize = 20.sp)
+                        Text("⚡", fontSize = 22.sp)
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                        Text("RidePilot", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
-                        Text("+91 $phone", color = Color(0xFF8B949E), fontSize = 12.sp)
+                        Text("RidePilot Pro", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                        Text("Fleet Master • $phone", color = Color(0xFF8B949E), fontSize = 12.sp)
                     }
-                }
-                TextButton(onClick = onLogout) {
-                    Text("Logout", color = Color(0xFFFF5252), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -158,73 +118,135 @@ fun MainDashboard(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Vehicle Fleet Selection
+            item {
+                Text("SELECT YOUR VEHICLE", color = Color(0xFF8B949E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    vehicleCategories.forEach { (name, icon) ->
+                        val isSel = selectedVehicle == name
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSel) Color(0xFF1B382B) else Color(0xFF161B22))
+                                .border(1.dp, if (isSel) Color(0xFF00E676) else Color(0xFF30363D), RoundedCornerShape(12.dp))
+                                .clickable {
+                                    selectedVehicle = name
+                                    prefs.vehicleType = name
+                                }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(icon, fontSize = 20.sp)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(name, color = if (isSel) Color(0xFF00E676) else Color(0xFF8B949E), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 🏠 GO HOME / DESTINATION CARD
             item {
                 Card(
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isGoHomeOn) Color(0xFF1F2B1D) else Color(0xFF161B22)
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, Color(0xFF30363D), RoundedCornerShape(18.dp))
+                        .border(1.5.dp, if (isGoHomeOn) Color(0xFFFFD600) else Color(0xFF30363D), RoundedCornerShape(18.dp))
                 ) {
-                    Column(modifier = Modifier.padding(18.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("PILOT ENGINE", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.sp)
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(if (autoAccept) Color(0x2200E676) else Color(0x22FF5252))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    if (autoAccept) "ONLINE • AUTO-ACCEPT" else "STANDBY",
-                                    color = if (autoAccept) Color(0xFF00E676) else Color(0xFFFF5252),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("🏠", fontSize = 22.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("Go Home / Destination Mode", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Text("Accepts ONLY orders heading towards target", color = Color(0xFF8B949E), fontSize = 11.sp)
+                                }
                             }
+                            Switch(
+                                checked = isGoHomeOn,
+                                onCheckedChange = {
+                                    isGoHomeOn = it
+                                    prefs.isGoHomeEnabled = it
+                                },
+                                colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFFFFD600), checkedThumbColor = Color.Black)
+                            )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Pro Fleet All-Access Active", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Instant notification intercept & auto-tap enabled", color = Color(0xFF8B949E), fontSize = 13.sp)
+
+                        if (isGoHomeOn) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedTextField(
+                                value = destText,
+                                onValueChange = {
+                                    destText = it
+                                    prefs.destinationAddress = it
+                                },
+                                label = { Text("Set Target Area / Home Location", color = Color(0xFF8B949E)) },
+                                placeholder = { Text("e.g. Ameerpet, Kukatpally, Airport", color = Color.Gray) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = Color(0xFFFFD600),
+                                    unfocusedBorderColor = Color(0xFF30363D)
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("TARGET DROP RADIUS (Under ${destRadiusKm.toInt()} KM)", color = Color(0xFFFFD600), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // 1 KM to 10 KM Selector Chips
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                destRadiusOptions.forEach { r ->
+                                    val isSelected = destRadiusKm == r
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) Color(0xFFFFD600) else Color(0xFF263228))
+                                            .border(1.dp, if (isSelected) Color(0xFFFFD600) else Color(0xFF3E4F3F), RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                destRadiusKm = r
+                                                prefs.destinationRadiusKm = r
+                                            }
+                                            .padding(vertical = 6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "${r.toInt()} KM",
+                                            color = if (isSelected) Color.Black else Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("⚡ Pickup distance is UNLIMITED • Drop must be under ${destRadiusKm.toInt()} KM", color = Color(0xFF8B949E), fontSize = 11.sp)
+                        }
                     }
                 }
             }
 
-            item {
-                Text("DISPATCH MODES", color = Color(0xFF8B949E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    ModeTile(
-                        icon = "🚖",
-                        title = "Rides",
-                        subtitle = "Bike / Auto",
-                        enabled = isRideOn,
-                        onToggle = {
-                            isRideOn = !isRideOn
-                            prefs.isRideEnabled = isRideOn
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ModeTile(
-                        icon = "📦",
-                        title = "Parcels",
-                        subtitle = "Courier / Food",
-                        enabled = isParcelOn,
-                        onToggle = {
-                            isParcelOn = !isParcelOn
-                            prefs.isParcelEnabled = isParcelOn
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
+            // Modes & Auto-Accept Toggles
             item {
                 Card(
                     shape = RoundedCornerShape(18.dp),
@@ -234,187 +256,96 @@ fun MainDashboard(
                         .border(1.dp, Color(0xFF30363D), RoundedCornerShape(18.dp))
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        ModernSettingRow(
-                            title = "⚡ Auto-Accept (Instant Click)",
-                            subtitle = "Automatic tap on Rapido / Porter accept buttons",
-                            checked = autoAccept,
-                            activeColor = Color(0xFF00E676),
-                            onChecked = {
-                                autoAccept = it
-                                prefs.autoAccept = it
-                            }
-                        )
-
+                        ModernSettingRow("⚡ Auto-Accept (Instant Tap)", "Instant auto-click on Rapido / Porter orders", autoAccept, Color(0xFF00E676)) {
+                            autoAccept = it
+                            prefs.autoAccept = it
+                        }
+                        HorizontalDivider(color = Color(0xFF21262D))
+                        ModernSettingRow("🚖 Ride Orders", "Passenger trips (Bike / Auto / Cab)", isRideOn, Color(0xFF00B0FF)) {
+                            isRideOn = it
+                            prefs.isRideEnabled = it
+                        }
+                        HorizontalDivider(color = Color(0xFF21262D))
+                        ModernSettingRow("📦 Parcel Orders", "Deliveries / Parcels / Truck Cargo", isParcelOn, Color(0xFFFFAB00)) {
+                            isParcelOn = it
+                            prefs.isParcelEnabled = it
+                        }
                         if (isRideOn && isParcelOn) {
                             HorizontalDivider(color = Color(0xFF21262D))
-                            ModernSettingRow(
-                                title = "🛣️ Same Route Combo (500m)",
-                                subtitle = "Accept parcel on your ongoing ride route",
-                                checked = isComboRouteOn,
-                                activeColor = Color(0xFF00B0FF),
-                                onChecked = {
-                                    isComboRouteOn = it
-                                    prefs.isComboRouteEnabled = it
-                                }
-                            )
+                            ModernSettingRow("🛣️ Combo Route (Under 500m)", "Match parcel along ongoing ride path", isComboRouteOn, Color(0xFF00E676)) {
+                                isComboRouteOn = it
+                                prefs.isComboRouteEnabled = it
+                            }
                         }
                     }
                 }
             }
 
-            item {
-                Text("MAX PICKUP DISTANCE", color = Color(0xFF8B949E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(0.5f, 1.0f, 2.0f, 3.0f, 5.0f).forEach { km ->
-                        val isSelected = maxPickupKm == km
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (isSelected) Color(0xFF00E676) else Color(0xFF161B22))
-                                .border(1.dp, if (isSelected) Color(0xFF00E676) else Color(0xFF30363D), RoundedCornerShape(10.dp))
-                                .clickable {
-                                    maxPickupKm = km
-                                    prefs.maxPickupKm = km
-                                }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                "${km} KM",
-                                color = if (isSelected) Color.Black else Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
+            // Regular Pickup Limit (Disabled in Go Home mode)
+            if (!isGoHomeOn) {
+                item {
+                    Text("MAX PICKUP DISTANCE", color = Color(0xFF8B949E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0.5f, 1.0f, 2.0f, 3.0f, 5.0f).forEach { km ->
+                            val isSel = maxPickupKm == km
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isSel) Color(0xFF00E676) else Color(0xFF161B22))
+                                    .border(1.dp, if (isSel) Color(0xFF00E676) else Color(0xFF30363D), RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        maxPickupKm = km
+                                        prefs.maxPickupKm = km
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text("${km} KM", color = if (isSel) Color.Black else Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
                         }
                     }
                 }
             }
 
+            // 1-Click Permissions Center
             item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(
-                        onClick = {
-                            val perms = mutableListOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            )
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                perms.add(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                            permissionLauncher.launch(perms.toTypedArray())
-                            if (!permissionManager.hasOverlayPermission()) {
-                                permissionManager.openOverlaySettings()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF21262D)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Permissions", color = Color.White)
-                    }
-
-                    Button(
-                        onClick = {
-                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                            context.startActivity(intent)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Accessibility", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("LIVE RADAR ORDERS", color = Color(0xFF8B949E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Text("${matchedOrders.size} Available", color = Color(0xFF00E676), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            items(matchedOrders) { order ->
                 Card(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, Color(0xFF30363D), RoundedCornerShape(14.dp))
+                    modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF30363D), RoundedCornerShape(16.dp))
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "${order.provider} • ${order.type.name}",
-                                color = if (order.type == OrderType.RIDE) Color(0xFF00B0FF) else Color(0xFFFFAB00),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
-                            Text("₹${order.payoutInr.toInt()}", color = Color(0xFF00E676), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("EASY 1-CLICK PERMISSIONS", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                    }
+                                    context.startActivity(intent)
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Allow Restricted", fontSize = 11.sp, color = Color.White)
+                            }
+
+                            Button(
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                    context.startActivity(intent)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Accessibility", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("${order.pickupAddress} ➔ ${order.dropAddress}", color = Color.White, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text("${order.distanceKm} KM Pickup Distance", color = Color(0xFF8B949E), fontSize = 12.sp)
                     }
                 }
             }
 
-            item {
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun ModeTile(
-    icon: String,
-    title: String,
-    subtitle: String,
-    enabled: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (enabled) Color(0xFF16251E) else Color(0xFF161B22)
-        ),
-        modifier = modifier
-            .border(
-                1.5.dp,
-                if (enabled) Color(0xFF00E676) else Color(0xFF30363D),
-                RoundedCornerShape(16.dp)
-            )
-            .clickable { onToggle() }
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(icon, fontSize = 24.sp)
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(if (enabled) Color(0xFF00E676) else Color(0xFF484F58))
-                )
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text(subtitle, color = Color(0xFF8B949E), fontSize = 12.sp)
+            item { Spacer(modifier = Modifier.height(20.dp)) }
         }
     }
 }
@@ -433,8 +364,8 @@ fun ModernSettingRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(subtitle, color = Color(0xFF8B949E), fontSize = 12.sp)
+            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(subtitle, color = Color(0xFF8B949E), fontSize = 11.sp)
         }
         Switch(
             checked = checked,

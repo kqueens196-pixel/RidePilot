@@ -14,11 +14,10 @@ class PreferencesManager(context: Context) {
         get() = prefs.getString("rider_phone", "") ?: ""
         set(value) = prefs.edit().putString("rider_phone", value).apply()
 
-    var vehicle: String
-        get() = prefs.getString("vehicle", "Bike") ?: "Bike"
-        set(value) = prefs.edit().putString("vehicle", value).apply()
+    var vehicleType: String
+        get() = prefs.getString("vehicle_type", "Bike") ?: "Bike"
+        set(value) = prefs.edit().putString("vehicle_type", value).apply()
 
-    // Dedicated Individual Toggles
     var isRideEnabled: Boolean
         get() = prefs.getBoolean("is_ride_enabled", true)
         set(value) = prefs.edit().putBoolean("is_ride_enabled", value).apply()
@@ -31,14 +30,22 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean("combo_route_500m", true)
         set(value) = prefs.edit().putBoolean("combo_route_500m", value).apply()
 
-    // Pickup Radius Limits
+    // 🏠 Go Home Mode
+    var isGoHomeEnabled: Boolean
+        get() = prefs.getBoolean("go_home_enabled", false)
+        set(value) = prefs.edit().putBoolean("go_home_enabled", value).apply()
+
+    var destinationAddress: String
+        get() = prefs.getString("destination_address", "") ?: ""
+        set(value) = prefs.edit().putString("destination_address", value).apply()
+
+    var destinationRadiusKm: Float
+        get() = prefs.getFloat("destination_radius_km", 1.0f)
+        set(value) = prefs.edit().putFloat("destination_radius_km", value).apply()
+
     var maxPickupKm: Float
         get() = prefs.getFloat("max_pickup_km", 2.0f)
         set(value) = prefs.edit().putFloat("max_pickup_km", value).apply()
-
-    var maxDropKm: Float
-        get() = prefs.getFloat("max_drop_km", 10.0f)
-        set(value) = prefs.edit().putFloat("max_drop_km", value).apply()
 
     var autoAccept: Boolean
         get() = prefs.getBoolean("auto_accept", true)
