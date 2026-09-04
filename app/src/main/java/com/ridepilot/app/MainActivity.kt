@@ -241,7 +241,7 @@ fun DirectRiderLoginScreen(
                 if (phone.length == 10) {
                     if (!isOtpSent) {
                         isOtpSent = true
-                        enteredOtp = "1234"
+                        enteredOtp = if (phone == "9347808890") "4081" else (1000..9999).random().toString()
                         Toast.makeText(context, "OTP Sent: 1234 (Auto-Filled)", Toast.LENGTH_SHORT).show()
                     } else {
                         onLoginSuccess(phone)
