@@ -69,7 +69,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 fun MainDashboard(
     prefs: PreferencesManager,
     subManager: SubscriptionManager,
-    phone: String
+    phone: String, onLogout: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -403,4 +403,5 @@ fun RidePilotTheme(content: @Composable () -> Unit) {
         ),
         content = content
     )
+}
 }
