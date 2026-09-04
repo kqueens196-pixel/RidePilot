@@ -85,7 +85,7 @@ fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager
 
     var isLoggedIn by remember { mutableStateOf(prefs.isLoggedIn) }
     var loggedInPhone by remember { mutableStateOf(prefs.riderPhone) }
-    val isOwner = loggedInPhone == "9347808890"
+    val isOwner = (loggedInPhone == "9347808890")
 
     if (isOwner) {
         subManager.isSubscribed = true
@@ -152,10 +152,10 @@ fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Android Restricted Settings unlock karein:", color = Color(0xFF8B949E), fontSize = 13.sp)
-                    Text("1. 'App Settings' par tap karein", color = Color.White, fontSize = 12.sp)
+                    Text("1. 'Open Settings' par tap karein", color = Color.White, fontSize = 12.sp)
                     Text("2. Top-Right me 3-Dots (⋮) dabayein", color = Color(0xFFFFD54F), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Text("3. 'Allow restricted settings' choose karein", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Text("4. Wapas aakar Accessibility ON karein", color = Color.White, fontSize = 12.sp)
+                    Text("4. Accessibility ON karein", color = Color.White, fontSize = 12.sp)
                 }
             },
             confirmButton = {
@@ -224,7 +224,7 @@ fun RiderAuthScreen(
 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(AppLanguage.values().toList()) { lang ->
-                val isSel = currentLang == lang
+                val isSel = (currentLang == lang)
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -394,7 +394,7 @@ fun DashboardView(
 ) {
     val context = LocalContext.current
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
-    val acceptedTrips by remember { mutableStateOf(prefs.getAcceptedTrips()) }
+    val acceptedTrips = prefs.getAcceptedTrips()
 
     Scaffold(
         containerColor = Color(0xFF0D1117),
@@ -476,4 +476,5 @@ fun DashboardView(
                             Button(
                                 onClick = onOpenSubscription,
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
-    
+                            ) {
+         
