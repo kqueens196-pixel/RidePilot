@@ -39,6 +39,8 @@ override fun onCreate(savedInstanceState: Bundle?) {
         subManager = SubscriptionManager(applicationContext)
 
         setContent {
+            val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) {}
+            androidx.compose.runtime.LaunchedEffect(Unit) { permLauncher.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS)) }
             RidePilotTheme {
                 var isLoggedIn by remember { mutableStateOf(prefs.isLoggedIn) }
                 var loggedInPhone by remember { mutableStateOf(prefs.riderPhone) }
