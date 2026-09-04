@@ -1,18 +1,21 @@
 package com.ridepilot.app
 
 import androidx.compose.foundation.layout.*
-import androidx.sompose.material3.*
-import androidx.sompose.runtime.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun LoginScreen(onLoginSuccess: (String) -> Unit) {
     var phone by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf(6") }
+    var otp by remember { mutableStateOf("") }
     var isOtpSent by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -21,52 +24,67 @@ fun LoginScreen(onLoginSuccess: (String) -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "RidePilot Login",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+        Text("RidePilot", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Driver & Delivery Partner Login", style = MaterialTheme.typography.bodyMedium)
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        OutlinedTextField(
+            value = phone,
+            onValueChange = { if (it.length <= 10) phone = it },
+            label = { Text("Mobile Number") },
+            placeholder = { Text("10 digit mobile") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
-        Spacer(modifier = Modifier.height(20.dp))
 
+        Spacer(modifier = Modifier.height(12.dp))
 
-       if (!isOtpSent) {
-            OutlinedTextField(
-                value = phone,
-                onValueChange = { if (it.length <= 10) phone = it },
-                label = { Text("Mobile Number") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+        if (!isOtpSent) {
             Button(
-                onClick = { if (phone.length == 10) isOtpSent = true },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = phone.length == 10
+                onClick = {
+                    if (phone.length == 10) {
+                        isOtpSent = true
+                        errorMessage = ""
+                    } else {
+                        errorMessage = "Please enter valid 10-digit number"
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Get OTP")
             }
         } else {
-            Text("Enter OTP sent to +91 $phone", style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 value = otp,
                 onValueChange = { if (it.length <= 6) otp = it },
-                label = { Text("6-Digit OTP") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                label = { Text("Enter OTP") },
+                placeholder = { Text("6 digit OTP") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Button(
                 onClick = {
-                    if (otp.length == 6) {
+                    if (otp.length == 6 || otp == "123456") {
                         onLoginSuccess(phone)
+                    } else {
+                        errorMessage = "Invalid OTP. Use test OTP: 123456"
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = otp.length == 6
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Verify & Continue")
+                Text("Verify & Login")
             }
+        }
+
+        if (errorMessage.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

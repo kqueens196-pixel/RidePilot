@@ -11,7 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selectable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -83,7 +83,6 @@ fun MainDashboard(
     var liveOrders by remember { mutableStateOf<List<NormalizedOrder>>(emptyList()) }
     var isLoadingOrders by remember { mutableStateOf(false) }
 
-    // Backend API se live feed load karein
     LaunchedEffect(Unit) {
         isLoadingOrders = true
         val fetched = networkManager.fetchOrders()
