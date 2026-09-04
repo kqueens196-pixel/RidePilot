@@ -13,128 +13,151 @@ import java.util.Locale
 import java.util.regex.Pattern
 
 class RideAcceptService : AccessibilityService() {
-
     private var lastClickTime: Long = 0
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        val eventPkg = event?.packageName?.toString() ?: return
-        if (eventPkg == applicationContext.packageName) return
+    // Universal list of accept keywords across all delivery & cab apps
+    private val universalAcceptKeywords = listOf(
+        "ACCEPT", "ACCEPT ORDER", "SWIPE TO ACCEPT", "SLIDE TO ACCEPT",
+        "CONFIRM", "BOOKING ACCEPT", "ACCEPT RIDE", "स्वीकारें",
+        "రైడ్ అంగీకరించండి", "ஒப்புக்கொள்", "ಸ್ವೀಕರಿಸಿ", "स्वीकारा", "স্বীকার করুন"
+    )
 
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val prefs = PreferencesManager(applicationContext)
-        if (!prefs.autoAccept) return
+        val subManager = SubscriptionManager(applicationContext)
+
+        // Strict Subscription Check: Only work if active
+        if (!prefs.autoAccept || !subManager.isSubscribed) return
 
         val windowList = windows
         if (!windowList.isNullOrEmpty()) {
-            for (w in windowList) { val r = w.root ?: continue; scanAndExecute(r, prefs, eventPkg) }
+            for (window in windowList) {
+                val root = window.root ?: continue
+                if (processUniversalNode(root, prefs)) return
+            }
         }
-        val rootNode = rootInActiveWindow ?: return
-        scanAndExecute(rootNode, prefs, eventPkg)
+        rootInActiveWindow?.let { processUniversalNode(it, prefs) }
     }
 
-    private fun scanAndExecute(rootNode: AccessibilityNodeInfo, prefs: PreferencesManager, pkg: String) {
+    private fun processUniversalNode(root: AccessibilityNodeInfo, prefs: PreferencesManager): Boolean {
         val allTexts = mutableListOf<String>()
-        val acceptButtons = mutableListOf<AccessibilityNodeInfo>()
+        val targetNodes = mutableListOf<AccessibilityNodeInfo>()
+        extractUniversal(root, allTexts, targetNodes)
 
-        extractAll(rootNode, allTexts, acceptButtons)
-        if (acceptButtons.isEmpty()) return
+        if (targetNodes.isEmpty()) return false
 
-        val fullScreenText = allTexts.joinToString(" ").uppercase()
+        var pickupText = "Nearby Location"
+        var dropText = "Customer Drop Location"
+        var fareText = "₹--"
+        var pickupKm = 0.0
 
-        // 🏠 Go Home Mode Filter
+        for (i in allTexts.indices) {
+            val t = allTexts[i].trim()
+            if (t.contains("₹") && fareText == "₹--") fareText = t
+            if (t.matches(Regex(".*\\d+(\\.\\d+)?\\s*km.*", RegexOption.IGNORE_CASE))) {
+                val matcher = Pattern.compile("(\\d+(\\.\\d+)?)\\s*km", Pattern.CASE_INSENSITIVE).matcher(t)
+                if (matcher.find()) {
+                    val dist = matcher.group(1)?.toDoubleOrNull() ?: 0.0
+                    if (pickupKm == 0.0) {
+                        pickupKm = dist
+                        if (i + 1 < allTexts.size && allTexts[i + 1].length > 4) pickupText = allTexts[i + 1]
+                    } else {
+                        if (i + 1 < allTexts.size && allTexts[i + 1].length > 4) dropText = allTexts[i + 1]
+                    }
+                }
+            }
+        }
+
+        // Go Home Destination matching
         if (prefs.isGoHomeEnabled) {
             val target = prefs.destinationAddress.trim().uppercase()
             if (target.isNotEmpty()) {
-                val matchesDrop = fullScreenText.contains(target) ||
-                                  target.split(" ").any { it.length > 3 && fullScreenText.contains(it) }
-                if (!matchesDrop) return
+                val fullText = allTexts.joinToString(" ").uppercase()
+                val match = fullText.contains(target) || target.split(" ").any { it.length > 3 && fullText.contains(it) }
+                if (!match) return false
             }
         } else {
-            var pickupKm = 0.0
-            val kmPattern = Pattern.compile("(\\d+(\\.\\d+)?)\\s*KM", Pattern.CASE_INSENSITIVE)
-            for (str in allTexts) {
-                val m = kmPattern.matcher(str)
-                if (m.find()) {
-                    val value = m.group(1)?.toDoubleOrNull() ?: 0.0
-                    if (pickupKm == 0.0) pickupKm = value
-                }
-            }
-            if (pickupKm > 0.0 && pickupKm > prefs.maxPickupKm) return
+            if (pickupKm > 0.0 && pickupKm > prefs.maxPickupKm) return false
         }
 
-        if (System.currentTimeMillis() - lastClickTime < 1500) return
+        if (System.currentTimeMillis() - lastClickTime < 1200) return false
 
-        for (btn in acceptButtons) {
-            if (clickTarget(btn)) {
+        for (node in targetNodes) {
+            if (executeUniversalAction(node)) {
                 lastClickTime = System.currentTimeMillis()
-
-                // Extract details from screen
-                val fare = allTexts.find { it.contains("₹") } ?: "₹--"
-                val addresses = allTexts.filter { it.length > 8 && !it.contains("ACCEPT", true) && !it.contains("₹") }
-                val pickup = if (addresses.isNotEmpty()) addresses[0] else "Current Location"
-                val drop = if (addresses.size > 1) addresses[1] else "Destination Location"
-
-                val provider = when {
-                    pkg.contains("rapido", true) -> "Rapido"
-                    pkg.contains("porter", true) -> "Porter"
-                    pkg.contains("uber", true) -> "Uber"
-                    pkg.contains("shadowfax", true) -> "Shadowfax"
-                    else -> "Partner Order"
-                }
-
                 val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
-
-                // 💾 Save to Recent Trips
                 prefs.addAcceptedTrip(
                     AcceptedTrip(
                         id = "TRIP-${System.currentTimeMillis() % 10000}",
-                        provider = provider,
-                        pickup = pickup,
-                        drop = drop,
-                        fare = fare,
+                        provider = "Delivery / Cab Order",
+                        pickup = pickupText,
+                        drop = dropText,
+                        fare = fareText,
                         time = time
                     )
                 )
-
-                val msg = if (prefs.isGoHomeEnabled) "🏠 Home Route Accepted!" else "⚡ Order Auto-Accepted ($fare)!"
-                Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
-                break
+                Toast.makeText(applicationContext, "⚡ Order Auto-Accepted: $fareText", Toast.LENGTH_SHORT).show()
+                return true
             }
         }
+        return false
     }
 
-    private fun extractAll(
-        node: AccessibilityNodeInfo,
-        texts: MutableList<String>,
-        buttons: MutableList<AccessibilityNodeInfo>
-    ) {
+    private fun extractUniversal(node: AccessibilityNodeInfo, texts: MutableList<String>, targets: MutableList<AccessibilityNodeInfo>) {
         val text = node.text?.toString()?.trim() ?: ""
         val desc = node.contentDescription?.toString()?.trim() ?: ""
-
         if (text.isNotEmpty()) texts.add(text)
-        if (desc.isNotEmpty()) texts.add(desc)
+        if (desc.isNotEmpty() && desc != text) texts.add(desc)
 
         val uText = text.uppercase()
         val uDesc = desc.uppercase()
 
-        if (uText == "ACCEPT" || uDesc == "ACCEPT" || uText.contains("SWIPE TO ACCEPT") || uText == "CONFIRM") {
-            buttons.add(node)
+        val isTarget = universalAcceptKeywords.any { kw ->
+            uText == kw || uDesc == kw || uText.contains(kw) || uDesc.contains(kw)
+        }
+
+        if (isTarget) {
+            targets.add(node)
         }
 
         for (i in 0 until node.childCount) {
-            node.getChild(i)?.let { extractAll(it, texts, buttons) }
+            node.getChild(i)?.let { extractUniversal(it, texts, targets) }
         }
     }
 
-    private fun clickTarget(node: AccessibilityNodeInfo): Boolean {
-        if (node.isClickable) return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+    private fun executeUniversalAction(node: AccessibilityNodeInfo): Boolean {
+        val nodeText = (node.text?.toString() ?: node.contentDescription?.toString() ?: "").uppercase()
+        val rect = Rect()
+        node.getBoundsInScreen(rect)
+
+        // If swipe or slide order (like Uber/Swiggy/Porter swipe button)
+        if (nodeText.contains("SWIPE") || nodeText.contains("SLIDE")) {
+            if (rect.width() > 0 && rect.height() > 0) {
+                val startX = rect.left + 50f
+                val endX = rect.right - 50f
+                val centerY = rect.centerY().toFloat()
+
+                val path = Path().apply {
+                    moveTo(startX, centerY)
+                    lineTo(endX, centerY)
+                }
+                val gesture = GestureDescription.Builder()
+                    .addStroke(GestureDescription.StrokeDescription(path, 0, 250))
+                    .build()
+                dispatchGesture(gesture, null, null)
+                return true
+            }
+        }
+
+        // Standard Click action
+        if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
         var p = node.parent
         while (p != null) {
-            if (p.isClickable) return p.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            if (p.isClickable && p.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
             p = p.parent
         }
 
-        val rect = Rect()
-        node.getBoundsInScreen(rect)
+        // Fallback tap gesture on center of button
         if (rect.centerX() > 0 && rect.centerY() > 0) {
             val path = Path().apply { moveTo(rect.centerX().toFloat(), rect.centerY().toFloat()) }
             val gesture = GestureDescription.Builder()
