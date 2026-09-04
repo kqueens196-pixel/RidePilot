@@ -1,6 +1,7 @@
 package com.ridepilot.app
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -221,11 +222,34 @@ fun MainDashboard(
             }
 
             item {
-                OutlinedButton(
-                    onClick = { showPlatformDialog = true },
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Connect Platforms")
+                    OutlinedButton(
+                        onClick = { showPlatformDialog = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Connect Platforms")
+                    }
+                    FilledTonalButton(
+                        onClick = {
+                            if (!permissionManager.hasOverlayPermission()) {
+                                Toast.makeText(context, "Please allow Overlay permission first", Toast.LENGTH_SHORT).show()
+                                permissionManager.openOverlaySettings()
+                            } else {
+                                val intent = Intent(context, OverlayService::class.java).apply {
+                                    putExtra("provider", "Rapido")
+                                    putExtra("payout", "₹240")
+                                    putExtra("pickup", "Indiranagar 100ft Rd")
+                                }
+                                context.startService(intent)
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Test Overlay")
+                    }
                 }
             }
 
