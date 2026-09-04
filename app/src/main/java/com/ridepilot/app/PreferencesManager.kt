@@ -27,6 +27,10 @@ class PreferencesManager(context: Context) {
         get() = prefs.getString("rider_name", "Arbaaz (VIP)") ?: "Arbaaz (VIP)"
         set(value) = prefs.edit().putString("rider_name", value).apply()
 
+    var vehicleType: String
+        get() = prefs.getString("vehicle_type", "Bike") ?: "Bike"
+        set(value) = prefs.edit().putString("vehicle_type", value).apply()
+
     var autoAccept: Boolean
         get() = prefs.getBoolean("auto_accept_enabled", true)
         set(value) = prefs.edit().putBoolean("auto_accept_enabled", value).apply()
