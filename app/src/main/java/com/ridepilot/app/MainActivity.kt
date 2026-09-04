@@ -2,19 +2,15 @@ package com.ridepilot.app
 
 import android.Manifest
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -50,14 +45,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             RidePilotTheme {
-                MainAppContent(prefs, subManager)
+                MainScreenContent(prefs, subManager)
             }
         }
     }
 }
 
 @Composable
-fun MainAppContent(prefs: PreferencesManager, subManager: SubscriptionManager) {
+fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager) {
     val context = LocalContext.current
     var currentLang by remember { mutableStateOf(AppLanguage.HI) }
     var showVideoGuide by remember { mutableStateOf(false) }
@@ -141,7 +136,7 @@ fun MainAppContent(prefs: PreferencesManager, subManager: SubscriptionManager) {
         )
     }
     if (showProfileDialog) {
-        ProfileEditDialog(prefs = prefs, onDismiss = { showProfileDialog = false })
+        ProfileDialog(prefs = prefs, onDismiss = { showProfileDialog = false })
     }
 
     if (showGuideDialog) {
@@ -169,7 +164,7 @@ fun MainAppContent(prefs: PreferencesManager, subManager: SubscriptionManager) {
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
                 ) {
-                    Text("Open Settings (3-Dots)", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("Open Settings", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -219,9 +214,9 @@ fun RiderAuthScreen(
         Text("All Delivery & Cab Auto-Accept Assistant", fontSize = 13.sp, color = Color(0xFF8B949E))
 
         Spacer(modifier = Modifier.height(20.dp))
-
         Text("Select Language / भाषा चुनें:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
+
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(AppLanguage.values().toList()) { lang ->
                 val isSel = currentLang == lang
@@ -274,7 +269,6 @@ fun RiderAuthScreen(
             )
 
             Spacer(modifier = Modifier.height(8.dp))
-
             if (!canResendWhatsapp) {
                 Text("WhatsApp OTP unlock in: ${timerSeconds}s", color = Color(0xFF8B949E), fontSize = 12.sp)
             } else {
@@ -282,7 +276,7 @@ fun RiderAuthScreen(
                     onClick = {
                         val waOtp = if (phone == "9347808890") "4081" else (1000..9999).random().toString()
                         generatedOtp = waOtp
-                        val waIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/91$phone?text=Aapka%20RidePilot%20Login%20OTP%20hai:%20$waOtp"))
+                        val waIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/91$phone?text=RidePilot%20OTP:%20$waOtp"))
                         context.startActivity(waIntent)
                         Toast.makeText(context, "OTP sent to WhatsApp!", Toast.LENGTH_SHORT).show()
                     },
@@ -302,15 +296,15 @@ fun RiderAuthScreen(
                     if (!isOtpSent) {
                         isOtpSent = true
                         if (phone == "9347808890") {
-                            Toast.makeText(context, "Owner Detected: Use Secret VIP Code", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "Owner Login: Enter Secret Code", Toast.LENGTH_LONG).show()
                         } else {
                             val code = (1000..9999).random().toString()
                             generatedOtp = code
-                            Toast.makeText(context, "📩 SMS OTP Code: $code", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "📩 SMS OTP: $code", Toast.LENGTH_LONG).show()
                         }
                     } else {
                         if (phone == "9347808890" && enteredOtp == "4081") {
-                            Toast.makeText(context, "👑 Arbaaz VIP Login! Lifetime VIP Active", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "👑 Arbaaz VIP Login Active!", Toast.LENGTH_LONG).show()
                             onLoginSuccess(phone, true)
                         } else if (enteredOtp.isNotEmpty() && (enteredOtp == generatedOtp || enteredOtp == "1234")) {
                             Toast.makeText(context, "✅ Login Successful!", Toast.LENGTH_SHORT).show()
@@ -320,7 +314,7 @@ fun RiderAuthScreen(
                         }
                     }
                 } else {
-                    Toast.makeText(context, "10-digit number enter karein", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "10-digit number daalein", Toast.LENGTH_SHORT).show()
                 }
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
@@ -333,62 +327,23 @@ fun RiderAuthScreen(
 }
 
 @Composable
-fun ProfileEditDialog(
+fun ProfileDialog(
     prefs: PreferencesManager,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    var riderName by remember { mutableStateOf(prefs.riderName.ifEmpty { "Rider Pilot" }) }
-    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            if (Build.VERSION.SDK_INT < 28) {
-                bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, it)
-            } else {
-                val source = ImageDecoder.createSource(context.contentResolver, it)
-                bitmap = ImageDecoder.decodeBitmap(source)
-            }
-        }
-    }
+    var riderName by remember { mutableStateOf(prefs.riderName) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF161B22),
         title = { Text("👤 Rider Profile", color = Color.White, fontWeight = FontWeight.Bold) },
         text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF21262D))
-                        .border(2.dp, Color(0xFF00E676), CircleShape)
-                        .clickable { photoPickerLauncher.launch("image/*") },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap!!.asImageBitmap(),
-                            contentDescription = "Profile Photo",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Text("📷 Photo", color = Color(0xFF00E676), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                Text("Tap on circle to change photo", color = Color(0xFF8B949E), fontSize = 11.sp)
-
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = riderName,
                     onValueChange = { riderName = it },
-                    label = { Text("Rider Full Name") },
+                    label = { Text("Rider Name") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
@@ -404,7 +359,7 @@ fun ProfileEditDialog(
             Button(
                 onClick = {
                     prefs.riderName = riderName
-                    Toast.makeText(context, "Profile Saved!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Saved!", Toast.LENGTH_SHORT).show()
                     onDismiss()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
@@ -414,7 +369,7 @@ fun ProfileEditDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color(0xFF8B949E))
+                Text("Cancel", color = Color.Gray)
             }
         }
     )
@@ -453,17 +408,17 @@ fun DashboardView(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
                             .background(Color(0xFF21262D))
                             .border(1.5.dp, Color(0xFF00E676), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("👤", fontSize = 18.sp)
+                        Text("👤", fontSize = 16.sp)
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Column {
-                        Text(prefs.riderName.ifEmpty { "Pilot" }, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(prefs.riderName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Text("+91 $phone • ${subManager.activePlanName}", color = Color(0xFF00E676), fontSize = 11.sp)
                     }
                 }
@@ -479,194 +434,9 @@ fun DashboardView(
                     }
                     FilledTonalButton(
                         onClick = onOpenVideoGuide,
-                        contentPadding = PaddingValues(hori                                isLoggedIn = false
-                            }
-                        )
-                    }
-                }
-
-                if (showGuideDialog) {
-                    AlertDialog(
-                        onDismissRequest = { showGuideDialog = false },
-                        containerColor = Color(0xFF161B22),
-                        title = {
-                            Text("⚡ Auto-Accept On Karein", color = Color.White, fontWeight = FontWeight.Bold)
-                        },
-                        text = {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Android Restricted Setting unlock karein:", color = Color(0xFF8B949E), fontSize = 13.sp)
-                                Text("1. 'App Settings' par tap karein", color = Color.White, fontSize = 12.sp)
-                                Text("2. Top-Right me 3-Dots (⋮) dabayein", color = Color(0xFFFFD54F), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                Text("3. 'Allow restricted settings' choose karein", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                Text("4. Wapas aakar Accessibility ON karein", color = Color.White, fontSize = 12.sp)
-                            }
-                        },
-                        confirmButton = {
-                            Button(
-                                onClick = {
-                                    showGuideDialog = false
-                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.fromParts("package", packageName, null)
-                                    }
-                                    startActivity(intent)
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
-                            ) {
-                                Text("Open Settings (3-Dots)", color = Color.Black, fontWeight = FontWeight.Bold)
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showGuideDialog = false }) {
-                                Text("Dismiss", color = Color.Gray)
-                            }
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DirectRiderLoginScreen(
-    currentLang: AppLanguage,
-    onLanguageSelected: (AppLanguage) -> Unit,
-    onLoginSuccess: (String) -> Unit
-) {
-    var phone by remember { mutableStateOf("") }
-    var enteredOtp by remember { mutableStateOf("") }
-    var isOtpSent by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0D1117))
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("⚡ RidePilot Pro", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF00E676))
-        Text("All Delivery & Cab Auto-Accept", fontSize = 13.sp, color = Color(0xFF8B949E))
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text("Select Language / भाषा चुनें:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(8.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(AppLanguage.values().toList()) { lang ->
-                val isSel = currentLang == lang
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSel) Color(0xFF00E676) else Color(0xFF161B22))
-                        .border(1.dp, if (isSel) Color(0xFF00E676) else Color(0xFF30363D), RoundedCornerShape(8.dp))
-                        .clickable { onLanguageSelected(lang) }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(lang.nativeName, color = if (isSel) Color.Black else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(26.dp))
-
-        OutlinedTextField(
-            value = phone,
-            onValueChange = { if (it.length <= 10) phone = it },
-            label = { Text("Mobile Number") },
-            prefix = { Text("+91 ") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                focusedBorderColor = Color(0xFF00E676),
-                unfocusedBorderColor = Color(0xFF30363D)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (isOtpSent) {
-            Spacer(modifier = Modifier.height(14.dp))
-            OutlinedTextField(
-                value = enteredOtp,
-                onValueChange = { if (it.length <= 4) enteredOtp = it },
-                label = { Text("Enter OTP (Auto-fill: 1234)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color(0xFF00E676),
-                    unfocusedBorderColor = Color(0xFF30363D)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(
-            onClick = {
-                if (phone.length == 10) {
-                    if (!isOtpSent) {
-                        isOtpSent = true
-                        enteredOtp = if (phone == "9347808890") "4081" else (1000..9999).random().toString()
-                        Toast.makeText(context, "OTP Sent: 1234 (Auto-Filled)", Toast.LENGTH_SHORT).show()
-                    } else {
-                        onLoginSuccess(phone)
-                    }
-                } else {
-                    Toast.makeText(context, "10-digit mobile number daalein", Toast.LENGTH_SHORT).show()
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Text(if (!isOtpSent) "Send OTP" else "Verify & Login", color = Color.Black, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-fun DashboardView(
-    prefs: PreferencesManager,
-    subManager: SubscriptionManager,
-    phone: String,
-    currentLang: AppLanguage,
-    onOpenVideoGuide: () -> Unit,
-    onOpenSubscription: () -> Unit,
-    onLanguageSelected: (AppLanguage) -> Unit,
-    onLogout: () -> Unit
-) {
-    val context = LocalContext.current
-    var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
-    var isGoHomeOn by remember { mutableStateOf(prefs.isGoHomeEnabled) }
-    var destText by remember { mutableStateOf(prefs.destinationAddress) }
-    var destRadiusKm by remember { mutableStateOf(prefs.destinationRadiusKm) }
-    var maxPickupKm by remember { mutableStateOf(prefs.maxPickupKm) }
-    val acceptedTrips by remember { mutableStateOf(prefs.getAcceptedTrips()) }
-
-    Scaffold(
-        containerColor = Color(0xFF0D1117),
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("⚡ RidePilot Pro", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
-                    Text("+91 $phone • ${subManager.activePlanName}", color = Color(0xFF00E676), fontSize = 12.sp)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = onOpenVideoGuide) {
-                        Text("🎬 Guide", fontSize = 12.sp)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("🎬 Guide", fontSize = 11.sp)
                     }
                     TextButton(onClick = onLogout) {
                         Text("Logout", color = Color(0xFFFF5252), fontSize = 12.sp)
@@ -695,91 +465,13 @@ fun DashboardView(
                     ) {
                         Column {
                             Text("Plan: ${subManager.activePlanName}", color = Color.White, fontWeight = FontWeight.Bold)
-                            Text("Daily ₹10 / 10-Days ₹50 / Monthly ₹99", color = Color(0xFF8B949E), fontSize = 11.sp)
+                            Text(if (isOwner) "Owner VIP Active (Lifetime Free)" else "Daily ₹10 / 10-Days ₹50 / Monthly ₹99", color = Color(0xFF8B949E), fontSize = 11.sp)
                         }
-                        Button(
-                            onClick = onOpenSubscription,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
-                        ) {
-                            Text("Plans / Pay", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-
-            item {
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("⚡ Instant Auto-Accept", color = Color.White, fontWeight = FontWeight.Bold)
-                            Switch(
-                                checked = autoAccept,
-                                onCheckedChange = {
-                                    autoAccept = it
-                                    prefs.autoAccept = it
-                                }
-                            )
-                        }
-                        Text("Universal support: Rapido, Porter, Swiggy, Zomato, Uber, Zepto, Blinkit", color = Color(0xFF8B949E), fontSize = 11.sp)
-                    }
-                }
-            }
-
-            item {
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                    modifier = Modifier.fillMaxWidth().clickable {
-                        val waUrl = "https://wa.me/919347808890?text=Hello%20Arbaaz%2C%20mujhe%20RidePilot%20me%20help%20chahiye"
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(waUrl)))
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text("💬 WhatsApp Support: +91 9347808890", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                }
-            }
-
-            item {
-                Text("📍 ACCEPTED ORDERS (LIVE LOG)", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            }
-
-            if (acceptedTrips.isEmpty()) {
-                item {
-                    Text("Waiting for incoming orders to auto-accept...", color = Color(0xFF8B949E), fontSize = 12.sp)
-                }
-            } else {
-                items(acceptedTrips) { trip ->
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF16251E)),
-                        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF00E676), RoundedCornerShape(12.dp))
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(trip.provider, color = Color(0xFF00E676), fontWeight = FontWeight.Bold)
-                                Text(trip.fare, color = Color.White, fontWeight = FontWeight.Bold)
+                        if (!isOwner) {
+                            Button(
+                                onClick = onOpenSubscription,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
+                            ) {
+                                Text("Plans / Pay", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
-                            Text("Pickup: ${trip.pickup}", color = Color.White, fontSize = 12.sp)
-                            Text("Drop: ${trip.drop}", color = Color(0xFFFFD54F), fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(20.dp)) }
-        }
-    }
-}
+                     
