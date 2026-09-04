@@ -33,23 +33,37 @@ class MainActivity : ComponentActivity() {
     private lateinit var prefs: PreferencesManager
     private lateinit var subManager: SubscriptionManager
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = PreferencesManager(applicationContext)
         subManager = SubscriptionManager(applicationContext)
 
         setContent {
             RidePilotTheme {
-                MainDashboard(
-                    prefs = prefs,
-                    subManager = subManager,
-                    phone = prefs.riderPhone.ifEmpty { "9876543210" }
-                )
+                var isLoggedIn by remember { mutableStateOf(prefs.isLoggedIn) }
+                var loggedInPhone by remember { mutableStateOf(prefs.riderPhone) }
+
+                if (!isLoggedIn) {
+                    LoginScreen(onLoginSuccess = { phone ->
+                        prefs.isLoggedIn = true
+                        prefs.riderPhone = phone
+                        loggedInPhone = phone
+                        isLoggedIn = true
+                    })
+                } else {
+                    MainDashboard(
+                        prefs = prefs,
+                        subManager = subManager,
+                        phone = loggedInPhone,
+                        onLogout = {
+                            prefs.clearSession()
+                            isLoggedIn = false
+                        }
+                    )
+                }
             }
         }
     }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainDashboard(
