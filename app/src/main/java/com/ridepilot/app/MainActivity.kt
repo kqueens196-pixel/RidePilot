@@ -458,6 +458,7 @@ fun DashboardView(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
+item {
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF16251E)),
@@ -477,4 +478,88 @@ fun DashboardView(
                                 onClick = onOpenSubscription,
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
                             ) {
-         
+                                Text("Plans / Pay", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("⚡ Instant Auto-Accept", color = Color.White, fontWeight = FontWeight.Bold)
+                            Switch(
+                                checked = autoAccept,
+                                onCheckedChange = {
+                                    autoAccept = it
+                                    prefs.autoAccept = it
+                                }
+                            )
+                        }
+                        Text("Universal: Rapido, Porter, Swiggy, Zomato, Uber, Zepto, Blinkit", color = Color(0xFF8B949E), fontSize = 11.sp)
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        val waUrl = "https://wa.me/919347808890?text=Hello%20Arbaaz%2C%20RidePilot%20help%20chahiye"
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(waUrl)))
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text("💬 WhatsApp Support: +91 9347808890", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                }
+            }
+
+            item {
+                Text("📍 ACCEPTED ORDERS (LIVE LOG)", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+
+            if (acceptedTrips.isEmpty()) {
+                item {
+                    Text("Waiting for incoming orders to auto-accept...", color = Color(0xFF8B949E), fontSize = 12.sp)
+                }
+            } else {
+                items(acceptedTrips) { trip ->
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF16251E)),
+                        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF00E676), RoundedCornerShape(12.dp))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(trip.provider, color = Color(0xFF00E676), fontWeight = FontWeight.Bold)
+                                Text(trip.fare, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                            Text("Pickup: ${trip.pickup}", color = Color.White, fontSize = 12.sp)
+                            Text("Drop: ${trip.drop}", color = Color(0xFFFFD54F), fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+
+item {
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+    }
+}
+    }
