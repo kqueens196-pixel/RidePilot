@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 
 @Composable
 fun SubscriptionScreen(
@@ -31,20 +32,30 @@ fun SubscriptionScreen(
 ) {
     val context = LocalContext.current
     var selectedPlan by remember { mutableStateOf<Plan?>(null) }
+    var txnStatusMessage by remember { mutableStateOf<String?>(null) }
 
     val upiLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        // Android UPI return callback
-        val data = result.data?.getStringExtra("response") ?: ""
-        val isSuccess = data.lowercase().contains("success") || result.resultCode == Activity.RESULT_OK
-        
-        selectedPlan?.let { plan ->
-            subManager.isSubscribed = true
-            subManager.activePlanName = plan.title
-            subManager.expiryTimeMillis = System.currentTimeMillis() + (plan.validityDays.toLong() * 24 * 60 * 60 * 1000)
-            Toast.makeText(context, "🎉 ${plan.title} Activated! Auto-Accept ON", Toast.LENGTH_LONG).show()
-            onPaymentSuccess()
+        val rawResponse = result.data?.getStringExtra("response") ?: ""
+        val responseLower = rawResponse.lowercase(Locale.ROOT)
+
+        // Strict UPI status verification
+        val isVerified = responseLower.contains("status=success") || 
+                         (responseLower.contains("success") && !responseLower.contains("fail") && !responseLower.contains("cancel"))
+
+        if (result.resultCode == Activity.RESULT_OK && isVerified) {
+            selectedPlan?.let { plan ->
+                subManager.isSubscribed = true
+                subManager.activePlanName = plan.title
+                subManager.expiryTimeMillis = System.currentTimeMillis() + (plan.validityDays.toLong() * 24 * 60 * 60 * 1000)
+                Toast.makeText(context, "✅ Payment Verified! ${plan.title} Active.", Toast.LENGTH_LONG).show()
+                onPaymentSuccess()
+            }
+        } else {
+            // Payment was canceled or failed
+            txnStatusMessage = "Payment verify nahi hua ya cancel ho gaya. Agar paise kat gaye hain toh WhatsApp support par transaction ID bhein."
+            Toast.makeText(context, "❌ Payment Verification Failed", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -80,6 +91,17 @@ fun SubscriptionScreen(
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text("UPI ID: 9347808890-n7bc@ibl", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Text("Payee: Mohammed Arbaaz (PhonePe Verified)", color = Color.White, fontSize = 12.sp)
+                    }
+                }
+
+                txnStatusMessage?.let { msg ->
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF331616)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFFFF5252), RoundedCornerShape(10.dp))
+                    ) {
+                        Text(msg, color = Color(0xFFFF8A80), fontSize = 12.sp, modifier = Modifier.padding(12.dp))
                     }
                 }
             }
@@ -119,6 +141,7 @@ fun SubscriptionScreen(
                         Button(
                             onClick = {
                                 selectedPlan = plan
+                                txnStatusMessage = null
                                 val rawAmount = plan.price.replace("₹", "").trim()
                                 val upiUri = Uri.parse("upi://pay").buildUpon()
                                     .appendQueryParameter("pa", "9347808890-n7bc@ibl")
@@ -131,7 +154,7 @@ fun SubscriptionScreen(
                                 try {
                                     upiLauncher.launch(intent)
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, "No UPI app found. Please pay to 9347808890-n7bc@ibl", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "No UPI app found. Please pay manually to 9347808890-n7bc@ibl", Toast.LENGTH_LONG).show()
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
@@ -148,7 +171,7 @@ fun SubscriptionScreen(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
                     modifier = Modifier.fillMaxWidth().clickable {
-                        val waUrl = "https://wa.me/919347808890?text=Hello%20Arbaaz%2C%20maine%20RidePilot%20par%20payment%20kiya%20hai"
+                        val waUrl = "https://wa.me/919347808890?text=Hello%20Arbaaz%2C%20maine%20RidePilot%20par%20payment%20kiya%20hai%20lekin%20verify%20nahi%20hua.%20Mera%20Txn%20Screenshot%20yeh%20hai"
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
                         context.startActivity(intent)
                     }
