@@ -12,8 +12,7 @@ data class NormalizedOrder(
     val pickupAddress: String,
     val dropAddress: String,
     val distanceKm: Double,
-    val payoutInr: Double,
-    val timestamp: Long = System.currentTimeMillis()
+    val payoutInr: Double
 )
 
 class OrderMatchingEngine(
@@ -21,22 +20,25 @@ class OrderMatchingEngine(
     private val subManager: SubscriptionManager
 ) {
     fun isOrderMatched(order: NormalizedOrder): Boolean {
-        // 1. Subscription check
-        if (order.type == OrderType.PARCEL && !subManager.canAccessParcelMatching()) {
-            return false
+        // 1. Service Mode Filter (Both, Only Ride, Only Parcel)
+        val matchesMode = when (prefs.serviceMode) {
+            "Only Ride" -> order.type == OrderType.RIDE
+            "Only Parcel" -> order.type == OrderType.PARCEL
+            else -> true // Both
+        }
+        if (!matchesMode) return false
+
+        // 2. Distance KM Radius Filter
+        val maxAllowedKm = if (order.type == OrderType.RIDE) {
+            parseRadius(prefs.rideRadius)
+        } else {
+            parseRadius(prefs.parcelRadius)
         }
 
-        // 2. Mode check
-        if (order.type == OrderType.PARCEL && !prefs.parcelMode) {
-            return false
-        }
+        return order.distanceKm <= maxAllowedKm
+    }
 
-        // 3. Radius check
-        val maxRadius = prefs.radius.replace(" KM", "").toDoubleOrNull() ?: 5.0
-        if (order.distanceKm > maxRadius) {
-            return false
-        }
-
-        return true
+    private fun parseRadius(radiusStr: String): Double {
+        return radiusStr.replace(" KM", "").trim().toDoubleOrNull() ?: 10.0
     }
 }
