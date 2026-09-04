@@ -7,6 +7,9 @@ import android.graphics.Rect
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.regex.Pattern
 
 class RideAcceptService : AccessibilityService() {
@@ -21,10 +24,10 @@ class RideAcceptService : AccessibilityService() {
         if (!prefs.autoAccept) return
 
         val rootNode = rootInActiveWindow ?: return
-        scanAndExecute(rootNode, prefs)
+        scanAndExecute(rootNode, prefs, eventPkg)
     }
 
-    private fun scanAndExecute(rootNode: AccessibilityNodeInfo, prefs: PreferencesManager) {
+    private fun scanAndExecute(rootNode: AccessibilityNodeInfo, prefs: PreferencesManager, pkg: String) {
         val allTexts = mutableListOf<String>()
         val acceptButtons = mutableListOf<AccessibilityNodeInfo>()
 
@@ -42,7 +45,6 @@ class RideAcceptService : AccessibilityService() {
                 if (!matchesDrop) return
             }
         } else {
-            // Normal Pickup distance check
             var pickupKm = 0.0
             val kmPattern = Pattern.compile("(\\d+(\\.\\d+)?)\\s*KM", Pattern.CASE_INSENSITIVE)
             for (str in allTexts) {
@@ -60,7 +62,36 @@ class RideAcceptService : AccessibilityService() {
         for (btn in acceptButtons) {
             if (clickTarget(btn)) {
                 lastClickTime = System.currentTimeMillis()
-                val msg = if (prefs.isGoHomeEnabled) "🏠 Home Destination Accepted!" else "⚡ Order Auto-Accepted!"
+
+                // Extract details from screen
+                val fare = allTexts.find { it.contains("₹") } ?: "₹--"
+                val addresses = allTexts.filter { it.length > 8 && !it.contains("ACCEPT", true) && !it.contains("₹") }
+                val pickup = if (addresses.isNotEmpty()) addresses[0] else "Current Location"
+                val drop = if (addresses.size > 1) addresses[1] else "Destination Location"
+
+                val provider = when {
+                    pkg.contains("rapido", true) -> "Rapido"
+                    pkg.contains("porter", true) -> "Porter"
+                    pkg.contains("uber", true) -> "Uber"
+                    pkg.contains("shadowfax", true) -> "Shadowfax"
+                    else -> "Partner Order"
+                }
+
+                val time = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date())
+
+                // 💾 Save to Recent Trips
+                prefs.addAcceptedTrip(
+                    AcceptedTrip(
+                        id = "TRIP-${System.currentTimeMillis() % 10000}",
+                        provider = provider,
+                        pickup = pickup,
+                        drop = drop,
+                        fare = fare,
+                        time = time
+                    )
+                )
+
+                val msg = if (prefs.isGoHomeEnabled) "🏠 Home Route Accepted!" else "⚡ Order Auto-Accepted ($fare)!"
                 Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
                 break
             }

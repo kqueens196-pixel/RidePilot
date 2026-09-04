@@ -2,6 +2,17 @@ package com.ridepilot.app
 
 import android.content.Context
 import android.content.SharedPreferences
+import org.json.JSONArray
+import org.json.JSONObject
+
+data class AcceptedTrip(
+    val id: String,
+    val provider: String,
+    val pickup: String,
+    val drop: String,
+    val fare: String,
+    val time: String
+)
 
 class PreferencesManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("ridepilot_prefs", Context.MODE_PRIVATE)
@@ -30,7 +41,6 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean("combo_route_500m", true)
         set(value) = prefs.edit().putBoolean("combo_route_500m", value).apply()
 
-    // 🏠 Go Home Mode
     var isGoHomeEnabled: Boolean
         get() = prefs.getBoolean("go_home_enabled", false)
         set(value) = prefs.edit().putBoolean("go_home_enabled", value).apply()
@@ -50,6 +60,51 @@ class PreferencesManager(context: Context) {
     var autoAccept: Boolean
         get() = prefs.getBoolean("auto_accept", true)
         set(value) = prefs.edit().putBoolean("auto_accept", value).apply()
+
+    // 📜 Save Accepted Trip to History
+    fun addAcceptedTrip(trip: AcceptedTrip) {
+        val list = getAcceptedTrips().toMutableList()
+        list.add(0, trip) // Newest on top
+        if (list.size > 20) list.removeAt(list.size - 1) // Keep last 20 trips
+
+        val jsonArray = JSONArray()
+        list.forEach {
+            val obj = JSONObject().apply {
+                put("id", it.id)
+                put("provider", it.provider)
+                put("pickup", it.pickup)
+                put("drop", it.drop)
+                put("fare", it.fare)
+                put("time", it.time)
+            }
+            jsonArray.put(obj)
+        }
+        prefs.edit().putString("accepted_trips_json", jsonArray.toString()).apply()
+    }
+
+    fun getAcceptedTrips(): List<AcceptedTrip> {
+        val raw = prefs.getString("accepted_trips_json", null) ?: return emptyList()
+        val list = mutableListOf<AcceptedTrip>()
+        try {
+            val arr = JSONArray(raw)
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                list.add(
+                    AcceptedTrip(
+                        id = obj.optString("id"),
+                        provider = obj.optString("provider"),
+                        pickup = obj.optString("pickup"),
+                        drop = obj.optString("drop"),
+                        fare = obj.optString("fare"),
+                        time = obj.optString("time")
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
+    }
 
     fun clearSession() {
         prefs.edit().clear().apply()
