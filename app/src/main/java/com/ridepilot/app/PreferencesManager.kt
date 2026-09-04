@@ -5,6 +5,15 @@ import android.content.SharedPreferences
 import org.json.JSONArray
 import org.json.JSONObject
 
+data class AcceptedTrip(
+    val id: String,
+    val provider: String,
+    val pickup: String,
+    val drop: String,
+    val fare: String,
+    val time: String
+)
+
 class PreferencesManager(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("ridepilot_prefs", Context.MODE_PRIVATE)
@@ -49,14 +58,14 @@ class PreferencesManager(context: Context) {
         val list = getAcceptedTrips().toMutableList()
         list.add(0, trip)
         val array = JSONArray()
-        list.take(20).forEach {
+        list.take(20).forEach { item ->
             val obj = JSONObject()
-            obj.put("id", it.id)
-            obj.put("provider", it.provider)
-            obj.put("pickup", it.pickup)
-            obj.put("drop", it.drop)
-            obj.put("fare", it.fare)
-            obj.put("time", it.time)
+            obj.put("id", item.id)
+            obj.put("provider", item.provider)
+            obj.put("pickup", item.pickup)
+            obj.put("drop", item.drop)
+            obj.put("fare", item.fare)
+            obj.put("time", item.time)
             array.put(obj)
         }
         prefs.edit().putString("trip_logs", array.toString()).apply()
