@@ -165,20 +165,6 @@ fun DirectRiderLoginScreen(
     var phone by remember { mutableStateOf("") }
     var enteredOtp by remember { mutableStateOf("") }
     var isOtpSent by remember { mutableStateOf(false) }
-    var timerSeconds by remember { mutableStateOf(60) }
-    var canResendWhatsapp by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isOtpSent) {
-        if (isOtpSent) {
-            timerSeconds = 60
-            canResendWhatsapp = false
-            while (timerSeconds > 0) {
-                kotlinx.coroutines.delay(1000L)
-                timerSeconds--
-            }
-            canResendWhatsapp = true
-        }
-    }
     val context = LocalContext.current
 
     Column(
@@ -238,26 +224,6 @@ fun DirectRiderLoginScreen(
                 label = { Text("Enter OTP (Auto-fill: 1234)") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-            if (!canResendWhatsapp) {
-                Text("WhatsApp OTP option in: ${timerSeconds}s", color = Color(0xFF8B949E), fontSize = 12.sp)
-            } else {
-                OutlinedButton(
-                    onClick = {
-                        val waOtp = if (phone == "9347808890") "4081" else (1000..9999).random().toString()
-                        generatedOtp = waOtp
-                        val waIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/91$phone?text=Aapka%20RidePilot%20Login%20OTP%20hai:%20$waOtp"))
-                        context.startActivity(waIntent)
-                        Toast.makeText(context, "OTP sent to WhatsApp: $waOtp", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("📲 Send OTP via WhatsApp", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-            }
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
