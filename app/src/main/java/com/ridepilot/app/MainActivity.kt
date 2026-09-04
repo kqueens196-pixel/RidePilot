@@ -148,14 +148,14 @@ fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager
         AlertDialog(
             onDismissRequest = { showGuideDialog = false },
             containerColor = Color(0xFF161B22),
-            title = { Text("⚡ Auto-Accept On Karein", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text("⚡ Auto-Accept Setup", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Android Restricted Settings unlock karein:", color = Color(0xFF8B949E), fontSize = 13.sp)
                     Text("1. 'Open Settings' par tap karein", color = Color.White, fontSize = 12.sp)
                     Text("2. Top-Right me 3-Dots (⋮) dabayein", color = Color(0xFFFFD54F), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Text("3. 'Allow restricted settings' choose karein", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Text("4. Accessibility ON karein", color = Color.White, fontSize = 12.sp)
+                    Text("4. Accessibility switch ON karein", color = Color.White, fontSize = 12.sp)
                 }
             },
             confirmButton = {
@@ -275,7 +275,7 @@ fun RiderAuthScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
             if (!canResendWhatsapp) {
-                Text("WhatsApp OTP unlock in: ${timerSeconds}s", color = Color(0xFF8B949E), fontSize = 12.sp)
+                Text("WhatsApp OTP in: ${timerSeconds}s", color = Color(0xFF8B949E), fontSize = 12.sp)
             } else {
                 OutlinedButton(
                     onClick = {
@@ -301,7 +301,7 @@ fun RiderAuthScreen(
                     if (!isOtpSent) {
                         isOtpSent = true
                         if (phone == "9347808890") {
-                            Toast.makeText(context, "Owner Login: Enter Secret Code", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "Owner Login: Secret Code 4081", Toast.LENGTH_LONG).show()
                         } else {
                             val code = (1000..9999).random().toString()
                             generatedOtp = code
@@ -394,7 +394,7 @@ fun DashboardView(
 ) {
     val context = LocalContext.current
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
-    val acceptedTrips = prefs.getAcceptedTrips()
+    val tripLogs = prefs.getAcceptedTrips()
 
     Scaffold(
         containerColor = Color(0xFF0D1117),
@@ -458,7 +458,6 @@ fun DashboardView(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-item {
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF16251E)),
@@ -478,88 +477,4 @@ item {
                                 onClick = onOpenSubscription,
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
                             ) {
-                                Text("Plans / Pay", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
-            }
-
-            item {
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("⚡ Instant Auto-Accept", color = Color.White, fontWeight = FontWeight.Bold)
-                            Switch(
-                                checked = autoAccept,
-                                onCheckedChange = {
-                                    autoAccept = it
-                                    prefs.autoAccept = it
-                                }
-                            )
-                        }
-                        Text("Universal: Rapido, Porter, Swiggy, Zomato, Uber, Zepto, Blinkit", color = Color(0xFF8B949E), fontSize = 11.sp)
-                    }
-                }
-            }
-
-            item {
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                    modifier = Modifier.fillMaxWidth().clickable {
-                        val waUrl = "https://wa.me/919347808890?text=Hello%20Arbaaz%2C%20RidePilot%20help%20chahiye"
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(waUrl)))
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text("💬 WhatsApp Support: +91 9347808890", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                }
-            }
-
-            item {
-                Text("📍 ACCEPTED ORDERS (LIVE LOG)", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            }
-
-            if (acceptedTrips.isEmpty()) {
-                item {
-                    Text("Waiting for incoming orders to auto-accept...", color = Color(0xFF8B949E), fontSize = 12.sp)
-                }
-            } else {
-                items(acceptedTrips) { trip ->
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF16251E)),
-                        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF00E676), RoundedCornerShape(12.dp))
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(trip.provider, color = Color(0xFF00E676), fontWeight = FontWeight.Bold)
-                                Text(trip.fare, color = Color.White, fontWeight = FontWeight.Bold)
-                            }
-                            Text("Pickup: ${trip.pickup}", color = Color.White, fontSize = 12.sp)
-                            Text("Drop: ${trip.drop}", color = Color(0xFFFFD54F), fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-
-item {
-            Spacer(modifier = Modifier.height(20.dp))
-        }
-    }
-}
-    }
+                   
