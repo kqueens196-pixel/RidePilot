@@ -11,6 +11,7 @@
         android:allowBackup="true"
         android:label="RidePilot"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity
             android:name=".MainActivity"
