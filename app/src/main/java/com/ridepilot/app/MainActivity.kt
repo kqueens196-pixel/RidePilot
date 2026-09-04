@@ -39,7 +39,8 @@ override fun onCreate(savedInstanceState: Bundle?) {
         subManager = SubscriptionManager(applicationContext)
 
         setContent {
-            val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { try { this@MainActivity.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)) } catch (e: Exception) {} }
+            val showGuide = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+            val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { showGuide.value = true }
             androidx.compose.runtime.LaunchedEffect(Unit) { permLauncher.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS)) }
             RidePilotTheme {
                 var isLoggedIn by remember { mutableStateOf(prefs.isLoggedIn) }
