@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">RidePilot</string>
+    <string name="accessibility_desc">Allows RidePilot to auto-detect incoming matched ride and parcel requests for fast single-tap acceptance.</string>
+</resources>

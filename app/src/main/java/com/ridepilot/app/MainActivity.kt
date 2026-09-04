@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -109,7 +110,7 @@ fun MainDashboard(
         } else true
 
         if (fineLocationGranted && notifGranted) {
-            Toast.makeText(context, "Permissions granted", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Location & Notification granted", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -188,8 +189,8 @@ fun MainDashboard(
                     }
                 )
                 SettingRow(
-                    title = "Auto-Accept",
-                    subtitle = if (subManager.canAccessAutoAccept()) "Only for authorized provider integrations" else "PRO feature only",
+                    title = "Auto-Accept (Accessibility)",
+                    subtitle = if (subManager.canAccessAutoAccept()) "Auto-tap & instant accept for verified platforms" else "PRO feature only",
                     checked = autoAccept,
                     onCheckedChange = {
                         if (subManager.canAccessAutoAccept()) {
@@ -201,23 +202,38 @@ fun MainDashboard(
             }
 
             item {
-                Button(
-                    onClick = {
-                        val permissionsToRequest = mutableListOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        )
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                        permissionLauncher.launch(permissionsToRequest.toTypedArray())
-                        if (!permissionManager.hasOverlayPermission()) {
-                            permissionManager.openOverlaySettings()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Grant Required Permissions")
+                    Button(
+                        onClick = {
+                            val permissionsToRequest = mutableListOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                            permissionLauncher.launch(permissionsToRequest.toTypedArray())
+                            if (!permissionManager.hasOverlayPermission()) {
+                                permissionManager.openOverlaySettings()
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Grant Permissions")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Accessibility Settings")
+                    }
                 }
             }
 
@@ -235,7 +251,7 @@ fun MainDashboard(
                     FilledTonalButton(
                         onClick = {
                             if (!permissionManager.hasOverlayPermission()) {
-                                Toast.makeText(context, "Please allow Overlay permission first", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Enable Overlay permission first", Toast.LENGTH_SHORT).show()
                                 permissionManager.openOverlaySettings()
                             } else {
                                 val intent = Intent(context, OverlayService::class.java).apply {
