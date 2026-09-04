@@ -9,7 +9,7 @@ data class AcceptedTrip(
     val fare: String = "₹0",
     val pickup: String = "",
     val drop: String = "",
-    val time: Long = System.currentTimeMillis()
+    val time: String = System.currentTimeMillis().toString()
 )
 
 class PreferencesManager(context: Context) {
@@ -42,6 +42,18 @@ class PreferencesManager(context: Context) {
     var destinationAddress: String
         get() = prefs.getString("destination_address", "") ?: ""
         set(value) = prefs.edit().putString("destination_address", value).apply()
+
+    var destinationRadiusKm: Float
+        get() = prefs.getFloat("destination_radius_km", 5.0f)
+        set(value) = prefs.edit().putFloat("destination_radius_km", value).apply()
+
+    var isRideEnabled: Boolean
+        get() = prefs.getBoolean("is_ride_enabled", true)
+        set(value) = prefs.edit().putBoolean("is_ride_enabled", value).apply()
+
+    var isParcelEnabled: Boolean
+        get() = prefs.getBoolean("is_parcel_enabled", true)
+        set(value) = prefs.edit().putBoolean("is_parcel_enabled", value).apply()
 
     var isComboRouteEnabled: Boolean
         get() = prefs.getBoolean("is_combo_route_enabled", false)
