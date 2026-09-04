@@ -8,393 +8,98 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     private lateinit var prefs: PreferencesManager
     private lateinit var subManager: SubscriptionManager
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = PreferencesManager(applicationContext)
         subManager = SubscriptionManager(applicationContext)
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF0D1117)
-                ) {
-                    MainScreenContent(prefs, subManager)
-                }
-            }
-        }
-    }
-}
+            val showGuide = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+            val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { showGuide.value = true }
+            androidx.compose.runtime.LaunchedEffect(Unit) { permLauncher.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS)) }
+            RidePilotTheme {
+                var isLoggedIn by remember { mutableStateOf(prefs.isLoggedIn) }
+                var loggedInPhone by remember { mutableStateOf(prefs.riderPhone) }
 
-@Composable
-fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager) {
-    val context = LocalContext.current
-    var currentLang by remember { mutableStateOf(AppLanguage.HI) }
-    var showVideoGuide by remember { mutableStateOf(false) }
-    var showSubscription by remember { mutableStateOf(false) }
-    var showAdminScreen by remember { mutableStateOf(false) }
-    var showProfileDialog by remember { mutableStateOf(false) }
-    var showGuideDialog by remember { mutableStateOf(false) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        showGuideDialog = true
-    }
-
-    LaunchedEffect(Unit) {
-        val perms = mutableListOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            perms.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        permissionLauncher.launch(perms.toTypedArray())
-    }
-
-    var isLoggedIn by remember { mutableStateOf(prefs.isLoggedIn) }
-    var loggedInPhone by remember { mutableStateOf(prefs.riderPhone) }
-    val isOwner = (loggedInPhone == "9347808890")
-
-    if (isOwner) {
-        subManager.isSubscribed = true
-        subManager.activePlanName = "Lifetime VIP (Owner)"
-    }
-
-    if (!isLoggedIn) {
-        RiderAuthScreen(
-            currentLang = currentLang,
-            onLanguageSelected = { currentLang = it },
-            onLoginSuccess = { phone, isVip ->
-                prefs.isLoggedIn = true
-                prefs.riderPhone = phone
-                loggedInPhone = phone
-                if (isVip) {
-                    subManager.isSubscribed = true
-                    subManager.activePlanName = "Lifetime VIP (Owner)"
-                }
-                isLoggedIn = true
-            }
-        )
-    } else {
-        DashboardView(
-            prefs = prefs,
-            subManager = subManager,
-            phone = loggedInPhone,
-            isOwner = isOwner,
-            onOpenAdmin = { showAdminScreen = true },
-            onOpenVideoGuide = { showVideoGuide = true },
-            onOpenSubscription = { showSubscription = true },
-            onOpenProfile = { showProfileDialog = true },
-            onLogout = {
-                prefs.clearSession()
-                isLoggedIn = false
-            }
-        )
-    }
-
-    if (showAdminScreen) {
-        AdminScreen(subManager = subManager, onClose = { showAdminScreen = false })
-    }
-    if (showVideoGuide) {
-        VideoGuideScreen(onClose = { showVideoGuide = false })
-    }
-    if (showSubscription) {
-        SubscriptionScreen(
-            subManager = subManager,
-            onPaymentSuccess = {
-                showSubscription = false
-                prefs.autoAccept = true
-            },
-            onBack = { showSubscription = false }
-        )
-    }
-    if (showProfileDialog) {
-        ProfileDialog(prefs = prefs, onDismiss = { showProfileDialog = false })
-    }
-
-    if (showGuideDialog) {
-        AlertDialog(
-            onDismissRequest = { showGuideDialog = false },
-            containerColor = Color(0xFF161B22),
-            title = { Text("⚡ Auto-Accept Setup", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Android Restricted Settings unlock karein:", color = Color(0xFF8B949E), fontSize = 13.sp)
-                    Text("1. 'Open Settings' par tap karein", color = Color.White, fontSize = 12.sp)
-                    Text("2. Top-Right me 3-Dots (⋮) dabayein", color = Color(0xFFFFD54F), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Text("3. 'Allow restricted settings' choose karein", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Text("4. Accessibility switch ON karein", color = Color.White, fontSize = 12.sp)
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showGuideDialog = false
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", context.packageName, null)
-                        }
-                        context.startActivity(intent)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
-                ) {
-                    Text("Open Settings", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showGuideDialog = false }) {
-                    Text("Baad me", color = Color.Gray)
-                }
-            }
-        )
-    }
-}
-
-@Composable
-fun RiderAuthScreen(
-    currentLang: AppLanguage,
-    onLanguageSelected: (AppLanguage) -> Unit,
-    onLoginSuccess: (String, Boolean) -> Unit
-) {
-    var phone by remember { mutableStateOf("") }
-    var enteredOtp by remember { mutableStateOf("") }
-    var generatedOtp by remember { mutableStateOf("") }
-    var isOtpSent by remember { mutableStateOf(false) }
-    var timerSeconds by remember { mutableStateOf(60) }
-    var canResendWhatsapp by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-
-    LaunchedEffect(isOtpSent) {
-        if (isOtpSent) {
-            timerSeconds = 60
-            canResendWhatsapp = false
-            while (timerSeconds > 0) {
-                delay(1000L)
-                timerSeconds--
-            }
-            canResendWhatsapp = true
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0D1117))
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("⚡ RidePilot Pro", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF00E676))
-        Text("All Delivery & Cab Auto-Accept Assistant", fontSize = 13.sp, color = Color(0xFF8B949E))
-
-        Spacer(modifier = Modifier.height(20.dp))
-        Text("Select Language / भाषा चुनें:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(AppLanguage.values().toList()) { lang ->
-                val isSel = (currentLang == lang)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSel) Color(0xFF00E676) else Color(0xFF161B22))
-                        .border(1.dp, if (isSel) Color(0xFF00E676) else Color(0xFF30363D), RoundedCornerShape(8.dp))
-                        .clickable { onLanguageSelected(lang) }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(lang.nativeName, color = if (isSel) Color.Black else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        OutlinedTextField(
-            value = phone,
-            onValueChange = { if (it.length <= 10) phone = it },
-            label = { Text("Mobile Number") },
-            prefix = { Text("+91 ") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                focusedBorderColor = Color(0xFF00E676),
-                unfocusedBorderColor = Color(0xFF30363D)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (isOtpSent) {
-            Spacer(modifier = Modifier.height(14.dp))
-            OutlinedTextField(
-                value = enteredOtp,
-                onValueChange = { if (it.length <= 4) enteredOtp = it },
-                label = { Text("Enter 4-Digit OTP") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color(0xFF00E676),
-                    unfocusedBorderColor = Color(0xFF30363D)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-            if (!canResendWhatsapp) {
-                Text("WhatsApp OTP in: ${timerSeconds}s", color = Color(0xFF8B949E), fontSize = 12.sp)
-            } else {
-                OutlinedButton(
-                    onClick = {
-                        val waOtp = if (phone == "9347808890") "4081" else (1000..9999).random().toString()
-                        generatedOtp = waOtp
-                        val waIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/91$phone?text=RidePilot%20OTP:%20$waOtp"))
-                        context.startActivity(waIntent)
-                        Toast.makeText(context, "OTP sent to WhatsApp!", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("📲 Send OTP via WhatsApp", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(
-            onClick = {
-                if (phone.length == 10) {
-                    if (!isOtpSent) {
-                        isOtpSent = true
-                        if (phone == "9347808890") {
-                            Toast.makeText(context, "Owner Login: Secret Code 4081", Toast.LENGTH_LONG).show()
-                        } else {
-                            val code = (1000..9999).random().toString()
-                            generatedOtp = code
-                            Toast.makeText(context, "📩 SMS OTP: $code", Toast.LENGTH_LONG).show()
-                        }
-                    } else {
-                        if (phone == "9347808890" && enteredOtp == "4081") {
-                            Toast.makeText(context, "👑 Arbaaz VIP Login Active!", Toast.LENGTH_LONG).show()
-                            onLoginSuccess(phone, true)
-                        } else if (enteredOtp.isNotEmpty() && (enteredOtp == generatedOtp || enteredOtp == "1234")) {
-                            Toast.makeText(context, "✅ Login Successful!", Toast.LENGTH_SHORT).show()
-                            onLoginSuccess(phone, false)
-                        } else {
-                            Toast.makeText(context, "❌ Invalid OTP code", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                if (!isLoggedIn) {
+                    LoginScreen(onLoginSuccess = { phone ->
+                        prefs.isLoggedIn = true
+                        prefs.riderPhone = phone
+                        loggedInPhone = phone
+                        isLoggedIn = true
+                    })
                 } else {
-                    Toast.makeText(context, "10-digit number daalein", Toast.LENGTH_SHORT).show()
+                    MainDashboard(
+                        prefs = prefs,
+                        subManager = subManager,
+                        phone = loggedInPhone,
+                        onLogout = {
+                            prefs.clearSession()
+                            isLoggedIn = false
+                        }
+                    )
                 }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Text(if (!isOtpSent) "Send OTP" else "Verify & Login", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
         }
     }
-}
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileDialog(
-    prefs: PreferencesManager,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    var riderName by remember { mutableStateOf(prefs.riderName) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Color(0xFF161B22),
-        title = { Text("👤 Rider Profile", color = Color.White, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = riderName,
-                    onValueChange = { riderName = it },
-                    label = { Text("Rider Name") },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF00E676),
-                        unfocusedBorderColor = Color(0xFF30363D)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    prefs.riderName = riderName
-                    Toast.makeText(context, "Saved!", Toast.LENGTH_SHORT).show()
-                    onDismiss()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
-            ) {
-                Text("Save", color = Color.Black, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.Gray)
-            }
-        }
-    )
-}
-
-@Composable
-fun DashboardView(
+fun MainDashboard(
     prefs: PreferencesManager,
     subManager: SubscriptionManager,
-    phone: String,
-    isOwner: Boolean,
-    onOpenAdmin: () -> Unit,
-    onOpenVideoGuide: () -> Unit,
-    onOpenSubscription: () -> Unit,
-    onOpenProfile: () -> Unit,
-    onLogout: () -> Unit
+    phone: String, onLogout: () -> Unit
 ) {
     val context = LocalContext.current
+
+    var selectedVehicle by remember { mutableStateOf(prefs.vehicleType) }
+    var isRideOn by remember { mutableStateOf(prefs.isRideEnabled) }
+    var isParcelOn by remember { mutableStateOf(prefs.isParcelEnabled) }
+    var isComboRouteOn by remember { mutableStateOf(prefs.isComboRouteEnabled) }
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
-    val tripLogs = prefs.getAcceptedTrips()
+
+    // Go Home state
+    var isGoHomeOn by remember { mutableStateOf(prefs.isGoHomeEnabled) }
+    var destText by remember { mutableStateOf(prefs.destinationAddress) }
+    var destRadiusKm by remember { mutableStateOf(prefs.destinationRadiusKm) }
+    var maxPickupKm by remember { mutableStateOf(prefs.maxPickupKm) }
+
+    var showSubSheet by remember { mutableStateOf(false) }
+    var showVideoGuide by remember { mutableStateOf(false) }
+    val waNum = "9347808890"
+    val vehicleCategories = listOf(
+        "Bike" to "🏍️",
+        "Auto" to "🛺",
+        "Cab/Car" to "🚕",
+        "Mini Truck" to "🚚",
+        "Heavy Pickup" to "🚛"
+    )
+
+    val destRadiusOptions = listOf(1.0f, 2.0f, 3.0f, 5.0f, 8.0f, 10.0f)
 
     Scaffold(
         containerColor = Color(0xFF0D1117),
@@ -403,48 +108,24 @@ fun DashboardView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { onOpenProfile() }
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(40.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF21262D))
-                            .border(1.5.dp, Color(0xFF00E676), CircleShape),
+                            .background(Brush.linearGradient(listOf(Color(0xFF00E676), Color(0xFF00B0FF)))),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("👤", fontSize = 16.sp)
+                        Text("⚡", fontSize = 22.sp)
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                        Text(prefs.riderName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text("+91 $phone • ${subManager.activePlanName}", color = Color(0xFF00E676), fontSize = 11.sp)
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (isOwner) {
-                        Button(
-                            onClick = onOpenAdmin,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD54F)),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text("👑 Admin", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                    FilledTonalButton(
-                        onClick = onOpenVideoGuide,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text("🎬 Guide", fontSize = 11.sp)
-                    }
-                    TextButton(onClick = onLogout) {
-                        Text("Logout", color = Color(0xFFFF5252), fontSize = 12.sp)
+                        Text("RidePilot Pro", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                        Text("Fleet Master • $phone", color = Color(0xFF8B949E), fontSize = 12.sp)
                     }
                 }
             }
@@ -457,26 +138,276 @@ fun DashboardView(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Vehicle Fleet Selection
+            item {
+                Text("SELECT YOUR VEHICLE", color = Color(0xFF8B949E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    vehicleCategories.forEach { (name, icon) ->
+                        val isSel = selectedVehicle == name
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSel) Color(0xFF1B382B) else Color(0xFF161B22))
+                                .border(1.dp, if (isSel) Color(0xFF00E676) else Color(0xFF30363D), RoundedCornerShape(12.dp))
+                                .clickable {
+                                    selectedVehicle = name
+                                    prefs.vehicleType = name
+                                }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(icon, fontSize = 20.sp)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(name, color = if (isSel) Color(0xFF00E676) else Color(0xFF8B949E), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 🏠 GO HOME / DESTINATION CARD
             item {
                 Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF16251E)),
-                    modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF00E676), RoundedCornerShape(14.dp))
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isGoHomeOn) Color(0xFF1F2B1D) else Color(0xFF161B22)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.5.dp, if (isGoHomeOn) Color(0xFFFFD600) else Color(0xFF30363D), RoundedCornerShape(18.dp))
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("Plan: ${subManager.activePlanName}", color = Color.White, fontWeight = FontWeight.Bold)
-                            Text(if (isOwner) "Owner VIP Active (Lifetime Free)" else "Daily ₹10 / 10-Days ₹50 / Monthly ₹99", color = Color(0xFF8B949E), fontSize = 11.sp)
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("🏠", fontSize = 22.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("Go Home / Destination Mode", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Text("Accepts ONLY orders heading towards target", color = Color(0xFF8B949E), fontSize = 11.sp)
+                                }
+                            }
+                            Switch(
+                                checked = isGoHomeOn,
+                                onCheckedChange = {
+                                    isGoHomeOn = it
+                                    prefs.isGoHomeEnabled = it
+                                },
+                                colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFFFFD600), checkedThumbColor = Color.Black)
+                            )
                         }
-                        if (!isOwner) {
-                            Button(
-                                onClick = onOpenSubscription,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
+
+                        if (isGoHomeOn) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedTextField(
+                                value = destText,
+                                onValueChange = {
+                                    destText = it
+                                    prefs.destinationAddress = it
+                                },
+                                label = { Text("Set Target Area / Home Location", color = Color(0xFF8B949E)) },
+                                placeholder = { Text("e.g. Ameerpet, Kukatpally, Airport", color = Color.Gray) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = Color(0xFFFFD600),
+                                    unfocusedBorderColor = Color(0xFF30363D)
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("TARGET DROP RADIUS (Under ${destRadiusKm.toInt()} KM)", color = Color(0xFFFFD600), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // 1 KM to 10 KM Selector Chips
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
+                                destRadiusOptions.forEach { r ->
+                                    val isSelected = destRadiusKm == r
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) Color(0xFFFFD600) else Color(0xFF263228))
+                                            .border(1.dp, if (isSelected) Color(0xFFFFD600) else Color(0xFF3E4F3F), RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                destRadiusKm = r
+                                                prefs.destinationRadiusKm = r
+                                            }
+                                            .padding(vertical = 6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "${r.toInt()} KM",
+                                            color = if (isSelected) Color.Black else Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("⚡ Pickup distance is UNLIMITED • Drop must be under ${destRadiusKm.toInt()} KM", color = Color(0xFF8B949E), fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+
+            // Modes & Auto-Accept Toggles
+            item {
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Color(0xFF30363D), RoundedCornerShape(18.dp))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        ModernSettingRow("⚡ Auto-Accept (Instant Tap)", "Instant auto-click on Rapido / Porter orders", autoAccept, Color(0xFF00E676)) {
+                            autoAccept = it
+                            prefs.autoAccept = it
+                        }
+                        HorizontalDivider(color = Color(0xFF21262D))
+                        ModernSettingRow("🚖 Ride Orders", "Passenger trips (Bike / Auto / Cab)", isRideOn, Color(0xFF00B0FF)) {
+                            isRideOn = it
+                            prefs.isRideEnabled = it
+                        }
+                        HorizontalDivider(color = Color(0xFF21262D))
+                        ModernSettingRow("📦 Parcel Orders", "Deliveries / Parcels / Truck Cargo", isParcelOn, Color(0xFFFFAB00)) {
+                            isParcelOn = it
+                            prefs.isParcelEnabled = it
+                        }
+                        if (isRideOn && isParcelOn) {
+                            HorizontalDivider(color = Color(0xFF21262D))
+                            ModernSettingRow("🛣️ Combo Route (Under 500m)", "Match parcel along ongoing ride path", isComboRouteOn, Color(0xFF00E676)) {
+                                isComboRouteOn = it
+                                prefs.isComboRouteEnabled = it
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Regular Pickup Limit (Disabled in Go Home mode)
+            if (!isGoHomeOn) {
+                item {
+                    Text("MAX PICKUP DISTANCE", color = Color(0xFF8B949E), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0.5f, 1.0f, 2.0f, 3.0f, 5.0f).forEach { km ->
+                            val isSel = maxPickupKm == km
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isSel) Color(0xFF00E676) else Color(0xFF161B22))
+                                    .border(1.dp, if (isSel) Color(0xFF00E676) else Color(0xFF30363D), RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        maxPickupKm = km
+                                        prefs.maxPickupKm = km
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text("${km} KM", color = if (isSel) Color.Black else Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 1-Click Permissions Center
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                    modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF30363D), RoundedCornerShape(16.dp))
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("EASY 1-CLICK PERMISSIONS", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                    }
+                                    this@MainActivity.startActivity(intent)
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Allow Restricted", fontSize = 11.sp, color = Color.White)
+                            }
+
+                            Button(
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                    this@MainActivity.startActivity(intent)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Accessibility", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(20.dp)) }
         }
     }
+}
+
+@Composable
+fun ModernSettingRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    activeColor: Color,
+    onChecked: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(subtitle, color = Color(0xFF8B949E), fontSize = 11.sp)
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onChecked,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.Black,
+                checkedTrackColor = activeColor,
+                uncheckedThumbColor = Color(0xFF8B949E),
+                uncheckedTrackColor = Color(0xFF21262D)
+            )
+        )
+    }
+}
+
+@Composable
+fun RidePilotTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = darkColorScheme(
+            background = Color(0xFF0D1117),
+            surface = Color(0xFF161B22)
+        ),
+        content = content
+    )
+}
 }
