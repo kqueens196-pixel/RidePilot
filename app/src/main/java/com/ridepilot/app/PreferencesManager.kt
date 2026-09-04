@@ -34,6 +34,14 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean("auto_accept", false)
         set(value) = prefs.edit().putBoolean("auto_accept", value).apply()
 
+    var isRideEnabled: Boolean
+        get() = prefs.getBoolean("is_ride_enabled", true)
+        set(value) = prefs.edit().putBoolean("is_ride_enabled", value).apply()
+
+    var isParcelEnabled: Boolean
+        get() = prefs.getBoolean("is_parcel_enabled", true)
+        set(value) = prefs.edit().putBoolean("is_parcel_enabled", value).apply()
+
     var isGoHomeEnabled: Boolean
         get() = prefs.getBoolean("go_home_enabled", false)
         set(value) = prefs.edit().putBoolean("go_home_enabled", value).apply()
