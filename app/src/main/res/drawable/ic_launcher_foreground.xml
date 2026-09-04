@@ -1,0 +1,28 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer Pilot Wings / Shield -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M54,16 L88,32 L88,62 C88,78 72,92 54,98 C36,92 20,78 20,62 L20,32 Z"
+        android:fillAlpha="0.15"/>
+    <path
+        android:strokeColor="#00E676"
+        android:strokeWidth="2.5"
+        android:fillColor="#00000000"
+        android:pathData="M54,16 L88,32 L88,62 C88,78 72,92 54,98 C36,92 20,78 20,62 L20,32 Z"/>
+
+    <!-- Central Fast-Accept Lightning Spark -->
+    <path
+        android:fillColor="#00E676"
+        android:pathData="M57,28 L36,54 L52,54 L49,82 L72,50 L56,50 Z"/>
+
+    <!-- Navigation Pulse Rings -->
+    <path
+        android:strokeColor="#69F0AE"
+        android:strokeWidth="2"
+        android:pathData="M42,26 A20,20 0 0,1 66,26"
+        android:strokeLineCap="round"/>
+</vector>
