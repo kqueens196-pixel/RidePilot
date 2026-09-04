@@ -1,2 +1,6 @@
 node_modules/
 *.db
+
+audit.log
+ridepilot_data.json
+*.db
