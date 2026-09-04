@@ -24,24 +24,28 @@ class OrderNotificationListener : NotificationListenerService() {
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
         val combinedText = "$title $text".uppercase()
 
+        // Broad package matching: Rapido Captain, Porter Partner, etc.
         val isTargetApp = packageName.contains("rapido", true) ||
+                          packageName.contains("captain", true) ||
                           packageName.contains("porter", true) ||
                           packageName.contains("shadowfax", true) ||
-                          packageName.contains("uberdriver", true) ||
+                          packageName.contains("ubercab", true) ||
                           packageName.contains("swiggy", true) ||
                           packageName.contains("zomato", true)
 
-        val isOrderAlert = combinedText.contains("NEW ORDER") ||
-                           combinedText.contains("RIDE REQUEST") ||
-                           combinedText.contains("NEW RIDE") ||
+        val isOrderAlert = combinedText.contains("NEW") ||
+                           combinedText.contains("RIDE") ||
+                           combinedText.contains("ORDER") ||
+                           combinedText.contains("KM") ||
                            combinedText.contains("PICKUP") ||
                            combinedText.contains("DUTY") ||
                            combinedText.contains("₹")
 
-        if (isTargetApp && isOrderAlert) {
+        if (isTargetApp || isOrderAlert) {
             val prefs = PreferencesManager(applicationContext)
 
             if (prefs.autoAccept) {
+                // 1. Direct Notification Action Click (agar notification tray me Accept button ho)
                 var actionHandled = false
                 notification.actions?.forEach { action ->
                     val actionTitle = action.title?.toString()?.uppercase() ?: ""
@@ -55,6 +59,7 @@ class OrderNotificationListener : NotificationListenerService() {
                     }
                 }
 
+                // 2. Click notification contentIntent to bring to foreground
                 if (!actionHandled) {
                     try {
                         notification.contentIntent?.send()
@@ -66,14 +71,6 @@ class OrderNotificationListener : NotificationListenerService() {
                 lastIncomingPackage = packageName
                 lastOrderTimestamp = System.currentTimeMillis()
             }
-
-            val intent = Intent(applicationContext, OverlayService::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                putExtra("provider", if (packageName.contains("rapido", true)) "Rapido" else "Partner")
-                putExtra("payout", if (text.contains("₹")) "₹" + text.substringAfter("₹").split(" ").first() else "New Order")
-                putExtra("pickup", if (title.isNotEmpty()) title else "Incoming Request")
-            }
-            startService(intent)
         }
     }
 }

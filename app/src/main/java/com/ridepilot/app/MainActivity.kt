@@ -74,14 +74,13 @@ fun MainDashboard(
     val context = LocalContext.current
     val permissionManager = remember { PermissionManager(context) }
     val matchingEngine = remember { OrderMatchingEngine(prefs, subManager) }
-    val providerManager = remember { ProviderManager() }
 
     var vehicle by remember { mutableStateOf(prefs.vehicle) }
     var serviceMode by remember { mutableStateOf(prefs.serviceMode) }
-    var rideRadius by remember { mutableStateOf(prefs.rideRadius) }
-    var parcelRadius by remember { mutableStateOf(prefs.parcelRadius) }
+    var isParcelOn by remember { mutableStateOf(prefs.isParcelEnabled) }
+    var isComboRouteOn by remember { mutableStateOf(prefs.isComboRouteEnabled) }
+    var maxPickupKm by remember { mutableStateOf(prefs.maxPickupKm) }
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
-    var showPlatformDialog by remember { mutableStateOf(false) }
 
     var liveOrders by remember { mutableStateOf<List<NormalizedOrder>>(emptyList()) }
     var isLoadingOrders by remember { mutableStateOf(false) }
@@ -93,10 +92,9 @@ fun MainDashboard(
             fetched
         } else {
             listOf(
-                NormalizedOrder("ORD-101", "Rapido", OrderType.RIDE, "MG Road", "Airport", 4.2, 320.0),
-                NormalizedOrder("ORD-102", "Porter", OrderType.PARCEL, "Indiranagar", "Koramangala", 3.0, 150.0),
-                NormalizedOrder("ORD-103", "Uber", OrderType.RIDE, "Hitech City", "Madhapur", 2.1, 140.0),
-                NormalizedOrder("ORD-104", "Shadowfax", OrderType.PARCEL, "Gachibowli", "Kondapur", 7.5, 210.0)
+                NormalizedOrder("ORD-101", "Rapido", OrderType.RIDE, "Lakdikapul Metro", "Necklace Road", 2.2, 24.0),
+                NormalizedOrder("ORD-102", "Porter", OrderType.PARCEL, "Khairtabad", "Somajiguda", 1.8, 45.0),
+                NormalizedOrder("ORD-103", "Rapido", OrderType.RIDE, "Ameerpet", "Madhapur", 6.5, 95.0)
             )
         }
         isLoadingOrders = false
@@ -113,7 +111,7 @@ fun MainDashboard(
         } else true
 
         if (fineLocationGranted && notifGranted) {
-            Toast.makeText(context, "Location & Notification granted", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Permissions active", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -124,28 +122,29 @@ fun MainDashboard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Subscription Card
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = subManager.planName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            AssistChip(onClick = { }, label = { Text("ACTIVE PRO") })
+                            Text(text = "Pro Fleet All-Access", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            AssistChip(onClick = { }, label = { Text("ACTIVE") })
                         }
-                        Text(text = "${subManager.daysRemaining} days remaining • All features unlocked", style = MaterialTheme.typography.bodySmall)
+                        Text(text = "Auto-Accept & Same-Route Combo Active", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
 
-            // 1. Order Acceptance Mode: Both / Only Ride / Only Parcel
+            // Order Preference Modes
             item {
-                Text("Order Type Preference", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Service Mode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Both", "Only Ride", "Only Parcel").forEach { mode ->
                         FilterChip(
@@ -160,75 +159,58 @@ fun MainDashboard(
                 }
             }
 
-            // 2. Vehicle Selection
+            // Pickup Distance KM Control
             item {
-                Text("Vehicle Type", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Max Pickup Distance: ${"%.1f".format(maxPickupKm)} KM", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Orders farther than this pickup distance will be ignored", style = MaterialTheme.typography.bodySmall)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Bike", "Auto", "Car", "Delivery").forEach {
+                    listOf(0.5f, 1.0f, 2.0f, 3.0f, 5.0f).forEach { km ->
                         FilterChip(
-                            selected = vehicle == it,
+                            selected = maxPickupKm == km,
                             onClick = {
-                                vehicle = it
-                                prefs.vehicle = it
+                                maxPickupKm = km
+                                prefs.maxPickupKm = km
                             },
-                            label = { Text(it) }
+                            label = { Text("${km} KM") }
                         )
                     }
                 }
             }
 
-            // 3. Ride KM Radius (Visible if Both or Only Ride)
-            if (serviceMode != "Only Parcel") {
-                item {
-                    Text("Ride Max Radius (KM)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("2 KM", "5 KM", "10 KM", "15 KM").forEach {
-                            FilterChip(
-                                selected = rideRadius == it,
-                                onClick = {
-                                    rideRadius = it
-                                    prefs.rideRadius = it
-                                },
-                                label = { Text(it) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 4. Parcel KM Radius (Visible if Both or Only Parcel)
-            if (serviceMode != "Only Ride") {
-                item {
-                    Text("Parcel Max Radius (KM)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("1 KM", "3 KM", "5 KM", "10 KM").forEach {
-                            FilterChip(
-                                selected = parcelRadius == it,
-                                onClick = {
-                                    parcelRadius = it
-                                    prefs.parcelRadius = it
-                                },
-                                label = { Text(it) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 5. Auto-Accept Toggle (PRO Active)
+            // Toggles
             item {
                 SettingRow(
                     title = "⚡ Auto-Accept (Instant Tap)",
-                    subtitle = "Automatically taps accept on matching orders in background",
+                    subtitle = "Instantly clicks Accept on Rapido, Porter, Uber & floating widgets",
                     checked = autoAccept,
                     onCheckedChange = {
                         autoAccept = it
                         prefs.autoAccept = it
                     }
                 )
+
+                SettingRow(
+                    title = "📦 Parcel Orders Mode",
+                    subtitle = "Turn ON/OFF receiving delivery and courier parcel orders",
+                    checked = isParcelOn,
+                    onCheckedChange = {
+                        isParcelOn = it
+                        prefs.isParcelEnabled = it
+                    }
+                )
+
+                SettingRow(
+                    title = "🛣️ Ride + Parcel Combo (Under 500m)",
+                    subtitle = "Auto-accepts parcel delivery if pickup is on the same route within 500m of your ride",
+                    checked = isComboRouteOn,
+                    onCheckedChange = {
+                        isComboRouteOn = it
+                        prefs.isComboRouteEnabled = it
+                    }
+                )
             }
 
-            // Actions Buttons
+            // Permissions Buttons
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -265,27 +247,7 @@ fun MainDashboard(
                 }
             }
 
-            item {
-                FilledTonalButton(
-                    onClick = {
-                        if (!permissionManager.hasOverlayPermission()) {
-                            Toast.makeText(context, "Enable Overlay permission first", Toast.LENGTH_SHORT).show()
-                            permissionManager.openOverlaySettings()
-                        } else {
-                            val intent = Intent(context, OverlayService::class.java).apply {
-                                putExtra("provider", if (serviceMode == "Only Parcel") "Porter" else "Rapido")
-                                putExtra("payout", "₹240")
-                                putExtra("pickup", "Indiranagar 100ft Rd")
-                            }
-                            context.startService(intent)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Test Floating Overlay Bubble")
-                }
-            }
-
+            // Matched Live Orders Feed
             item {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 Row(
@@ -294,7 +256,7 @@ fun MainDashboard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Matched Orders (${matchedOrders.size})",
+                        text = "Orders in Range (${matchedOrders.size})",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
