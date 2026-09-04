@@ -77,8 +77,9 @@ fun MainDashboard(
     val providerManager = remember { ProviderManager() }
 
     var vehicle by remember { mutableStateOf(prefs.vehicle) }
-    var radius by remember { mutableStateOf(prefs.radius) }
-    var parcelMode by remember { mutableStateOf(prefs.parcelMode) }
+    var serviceMode by remember { mutableStateOf(prefs.serviceMode) }
+    var rideRadius by remember { mutableStateOf(prefs.rideRadius) }
+    var parcelRadius by remember { mutableStateOf(prefs.parcelRadius) }
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
     var showPlatformDialog by remember { mutableStateOf(false) }
 
@@ -93,7 +94,9 @@ fun MainDashboard(
         } else {
             listOf(
                 NormalizedOrder("ORD-101", "Rapido", OrderType.RIDE, "MG Road", "Airport", 4.2, 320.0),
-                NormalizedOrder("ORD-102", "Porter", OrderType.PARCEL, "Indiranagar", "Koramangala", 3.0, 150.0)
+                NormalizedOrder("ORD-102", "Porter", OrderType.PARCEL, "Indiranagar", "Koramangala", 3.0, 150.0),
+                NormalizedOrder("ORD-103", "Uber", OrderType.RIDE, "Hitech City", "Madhapur", 2.1, 140.0),
+                NormalizedOrder("ORD-104", "Shadowfax", OrderType.PARCEL, "Gachibowli", "Kondapur", 7.5, 210.0)
             )
         }
         isLoadingOrders = false
@@ -114,10 +117,6 @@ fun MainDashboard(
         }
     }
 
-    val subStatus = subManager.status
-    val daysLeft = subManager.daysRemaining
-    val planName = subManager.planName
-
     AppScaffold(phone = phone, onLogout = onLogout) {
         LazyColumn(
             modifier = Modifier
@@ -127,7 +126,7 @@ fun MainDashboard(
         ) {
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -136,14 +135,32 @@ fun MainDashboard(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = planName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            AssistChip(onClick = { }, label = { Text(subStatus.name) })
+                            Text(text = subManager.planName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            AssistChip(onClick = { }, label = { Text("ACTIVE PRO") })
                         }
-                        Text(text = "$daysLeft days remaining", style = MaterialTheme.typography.bodySmall)
+                        Text(text = "${subManager.daysRemaining} days remaining • All features unlocked", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
 
+            // 1. Order Acceptance Mode: Both / Only Ride / Only Parcel
+            item {
+                Text("Order Type Preference", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Both", "Only Ride", "Only Parcel").forEach { mode ->
+                        FilterChip(
+                            selected = serviceMode == mode,
+                            onClick = {
+                                serviceMode = mode
+                                prefs.serviceMode = mode
+                            },
+                            label = { Text(mode) }
+                        )
+                    }
+                }
+            }
+
+            // 2. Vehicle Selection
             item {
                 Text("Vehicle Type", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -160,47 +177,58 @@ fun MainDashboard(
                 }
             }
 
-            item {
-                Text("Parcel Radius", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("1 KM", "2 KM", "5 KM", "10 KM").forEach {
-                        FilterChip(
-                            selected = radius == it,
-                            onClick = {
-                                radius = it
-                                prefs.radius = it
-                            },
-                            label = { Text(it) }
-                        )
+            // 3. Ride KM Radius (Visible if Both or Only Ride)
+            if (serviceMode != "Only Parcel") {
+                item {
+                    Text("Ride Max Radius (KM)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("2 KM", "5 KM", "10 KM", "15 KM").forEach {
+                            FilterChip(
+                                selected = rideRadius == it,
+                                onClick = {
+                                    rideRadius = it
+                                    prefs.rideRadius = it
+                                },
+                                label = { Text(it) }
+                            )
+                        }
                     }
                 }
             }
 
-            item {
-                SettingRow(
-                    title = "Parcel Mode",
-                    subtitle = if (subManager.canAccessParcelMatching()) "Allow parcel matching" else "Requires active subscription",
-                    checked = parcelMode,
-                    onCheckedChange = {
-                        if (subManager.canAccessParcelMatching()) {
-                            parcelMode = it
-                            prefs.parcelMode = it
+            // 4. Parcel KM Radius (Visible if Both or Only Parcel)
+            if (serviceMode != "Only Ride") {
+                item {
+                    Text("Parcel Max Radius (KM)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("1 KM", "3 KM", "5 KM", "10 KM").forEach {
+                            FilterChip(
+                                selected = parcelRadius == it,
+                                onClick = {
+                                    parcelRadius = it
+                                    prefs.parcelRadius = it
+                                },
+                                label = { Text(it) }
+                            )
                         }
                     }
-                )
+                }
+            }
+
+            // 5. Auto-Accept Toggle (PRO Active)
+            item {
                 SettingRow(
-                    title = "Auto-Accept (Accessibility)",
-                    subtitle = if (subManager.canAccessAutoAccept()) "Auto-tap & instant accept for verified platforms" else "PRO feature only",
+                    title = "⚡ Auto-Accept (Instant Tap)",
+                    subtitle = "Automatically taps accept on matching orders in background",
                     checked = autoAccept,
                     onCheckedChange = {
-                        if (subManager.canAccessAutoAccept()) {
-                            autoAccept = it
-                            prefs.autoAccept = it
-                        }
+                        autoAccept = it
+                        prefs.autoAccept = it
                     }
                 )
             }
 
+            // Actions Buttons
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -222,7 +250,7 @@ fun MainDashboard(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Grant Permissions")
+                        Text("Permissions")
                     }
 
                     OutlinedButton(
@@ -232,40 +260,29 @@ fun MainDashboard(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Accessibility Settings")
+                        Text("Accessibility")
                     }
                 }
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { showPlatformDialog = true },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Connect Platforms")
-                    }
-                    FilledTonalButton(
-                        onClick = {
-                            if (!permissionManager.hasOverlayPermission()) {
-                                Toast.makeText(context, "Enable Overlay permission first", Toast.LENGTH_SHORT).show()
-                                permissionManager.openOverlaySettings()
-                            } else {
-                                val intent = Intent(context, OverlayService::class.java).apply {
-                                    putExtra("provider", "Rapido")
-                                    putExtra("payout", "₹240")
-                                    putExtra("pickup", "Indiranagar 100ft Rd")
-                                }
-                                context.startService(intent)
+                FilledTonalButton(
+                    onClick = {
+                        if (!permissionManager.hasOverlayPermission()) {
+                            Toast.makeText(context, "Enable Overlay permission first", Toast.LENGTH_SHORT).show()
+                            permissionManager.openOverlaySettings()
+                        } else {
+                            val intent = Intent(context, OverlayService::class.java).apply {
+                                putExtra("provider", if (serviceMode == "Only Parcel") "Porter" else "Rapido")
+                                putExtra("payout", "₹240")
+                                putExtra("pickup", "Indiranagar 100ft Rd")
                             }
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Test Overlay")
-                    }
+                            context.startService(intent)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Test Floating Overlay Bubble")
                 }
             }
 
@@ -277,7 +294,7 @@ fun MainDashboard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Live Orders (${matchedOrders.size})",
+                        text = "Matched Orders (${matchedOrders.size})",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -305,41 +322,6 @@ fun MainDashboard(
                     }
                 }
             }
-        }
-
-        if (showPlatformDialog) {
-            AlertDialog(
-                onDismissRequest = { showPlatformDialog = false },
-                title = { Text("Connect Partner Platforms") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "RidePilot connects only through authorized partner OAuth or official device integrations.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        providerManager.getAvailableProviders().forEach { provider ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(provider.name, fontWeight = FontWeight.Medium)
-                                FilledTonalButton(onClick = {
-                                    Toast.makeText(context, "${provider.name} auth initiated", Toast.LENGTH_SHORT).show()
-                                }) {
-                                    Text("Link")
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showPlatformDialog = false }) {
-                        Text("Close")
-                    }
-                }
-            )
         }
     }
 }
