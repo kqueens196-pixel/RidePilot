@@ -4,7 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selectable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,10 +17,12 @@ import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
     private lateinit var prefs: PreferencesManager
+    private lateinit var subManager: SubscriptionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = PreferencesManager(applicationContext)
+        subManager = SubscriptionManager(applicationContext)
 
         setContent {
             RidePilotTheme {
@@ -35,6 +39,7 @@ class MainActivity : ComponentActivity() {
                 } else {
                     MainDashboard(
                         prefs = prefs,
+                        subManager = subManager,
                         phone = loggedInPhone,
                         onLogout = {
                             prefs.clearSession()
@@ -49,18 +54,60 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainDashboard(prefs: PreferencesManager, phone: String, onLogout: () -> Unit) {
+fun MainDashboard(
+    prefs: PreferencesManager,
+    subManager: SubscriptionManager,
+    phone: String,
+    onLogout: () -> Unit
+) {
     var vehicle by remember { mutableStateOf(prefs.vehicle) }
     var radius by remember { mutableStateOf(prefs.radius) }
     var parcelMode by remember { mutableStateOf(prefs.parcelMode) }
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
+
+    val subStatus = subManager.status
+    val daysLeft = subManager.daysRemaining
+    val planName = subManager.planName
 
     AppScaffold(phone = phone, onLogout = onLogout) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
+                .verticalScroll(rememberScrollState())
         ) {
+            // Subscription Card
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = planName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        AssistChip(
+                            onClick = { },
+                            label = { Text(subStatus.name) }
+                        )
+                    }
+                    Text(
+                        text = "$daysLeft days remaining in current cycle",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text("Vehicle Type", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Bike", "Auto", "Car", "Delivery").forEach {
@@ -93,20 +140,24 @@ fun MainDashboard(prefs: PreferencesManager, phone: String, onLogout: () -> Unit
             Spacer(modifier = Modifier.height(16.dp))
             SettingRow(
                 title = "Parcel Mode",
-                subtitle = "Allow parcel matching",
+                subtitle = if (subManager.canAccessParcelMatching()) "Allow parcel matching" else "Requires active subscription",
                 checked = parcelMode,
                 onCheckedChange = {
-                    parcelMode = it
-                    prefs.parcelMode = it
+                    if (subManager.canAccessParcelMatching()) {
+                        parcelMode = it
+                        prefs.parcelMode = it
+                    }
                 }
             )
             SettingRow(
                 title = "Auto-Accept",
-                subtitle = "Only for authorized provider integrations",
+                subtitle = if (subManager.canAccessAutoAccept()) "Only for authorized provider integrations" else "PRO feature only",
                 checked = autoAccept,
                 onCheckedChange = {
-                    autoAccept = it
-                    prefs.autoAccept = it
+                    if (subManager.canAccessAutoAccept()) {
+                        autoAccept = it
+                        prefs.autoAccept = it
+                    }
                 }
             )
 
