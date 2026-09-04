@@ -9,9 +9,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selectable
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -68,11 +68,23 @@ fun MainDashboard(
 ) {
     val context = LocalContext.current
     val permissionManager = remember { PermissionManager(context) }
+    val matchingEngine = remember { OrderMatchingEngine(prefs, subManager) }
 
     var vehicle by remember { mutableStateOf(prefs.vehicle) }
     var radius by remember { mutableStateOf(prefs.radius) }
     var parcelMode by remember { mutableStateOf(prefs.parcelMode) }
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
+
+    // Dummy Mock Orders to test matching rules
+    val allOrders = remember {
+        listOf(
+            NormalizedOrder("ORD-101", "Partner API", OrderType.RIDE, "MG Road", "Airport", 4.2, 320.0),
+            NormalizedOrder("ORD-102", "Partner API", OrderType.PARCEL, "Indiranagar", "Koramangala", 3.0, 150.0),
+            NormalizedOrder("ORD-103", "Partner API", OrderType.PARCEL, "Whitefield", "Electronic City", 18.5, 450.0)
+        )
+    }
+
+    val matchedOrders = allOrders.filter { matchingEngine.isOrderMatched(it) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -83,9 +95,7 @@ fun MainDashboard(
         } else true
 
         if (fineLocationGranted && notifGranted) {
-            Toast.makeText(context, "All required permissions granted!", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(context, "Permissions denied. Some features may not work.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Permissions granted", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -94,116 +104,136 @@ fun MainDashboard(
     val planName = subManager.planName
 
     AppScaffold(phone = phone, onLogout = onLogout) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = planName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        AssistChip(onClick = { }, label = { Text(subStatus.name) })
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = planName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            AssistChip(onClick = { }, label = { Text(subStatus.name) })
+                        }
+                        Text(text = "$daysLeft days remaining", style = MaterialTheme.typography.bodySmall)
                     }
-                    Text(text = "$daysLeft days remaining in current cycle", style = MaterialTheme.typography.bodySmall)
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text("Vehicle Type", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Bike", "Auto", "Car", "Delivery").forEach {
-                    FilterChip(
-                        selected = vehicle == it,
-                        onClick = {
-                            vehicle = it
-                            prefs.vehicle = it
-                        },
-                        label = { Text(it) }
-                    )
+            item {
+                Text("Vehicle Type", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Bike", "Auto", "Car", "Delivery").forEach {
+                        FilterChip(
+                            selected = vehicle == it,
+                            onClick = {
+                                vehicle = it
+                                prefs.vehicle = it
+                            },
+                            label = { Text(it) }
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Parcel Radius", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("1 KM", "2 KM", "5 KM", "10 KM").forEach {
-                    FilterChip(
-                        selected = radius == it,
-                        onClick = {
-                            radius = it
-                            prefs.radius = it
-                        },
-                        label = { Text(it) }
-                    )
+            item {
+                Text("Parcel Radius", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("1 KM", "2 KM", "5 KM", "10 KM").forEach {
+                        FilterChip(
+                            selected = radius == it,
+                            onClick = {
+                                radius = it
+                                prefs.radius = it
+                            },
+                            label = { Text(it) }
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            SettingRow(
-                title = "Parcel Mode",
-                subtitle = if (subManager.canAccessParcelMatching()) "Allow parcel matching" else "Requires active subscription",
-                checked = parcelMode,
-                onCheckedChange = {
-                    if (subManager.canAccessParcelMatching()) {
-                        parcelMode = it
-                        prefs.parcelMode = it
+            item {
+                SettingRow(
+                    title = "Parcel Mode",
+                    subtitle = if (subManager.canAccessParcelMatching()) "Allow parcel matching" else "Requires active subscription",
+                    checked = parcelMode,
+                    onCheckedChange = {
+                        if (subManager.canAccessParcelMatching()) {
+                            parcelMode = it
+                            prefs.parcelMode = it
+                        }
                     }
-                }
-            )
-            SettingRow(
-                title = "Auto-Accept",
-                subtitle = if (subManager.canAccessAutoAccept()) "Only for authorized provider integrations" else "PRO feature only",
-                checked = autoAccept,
-                onCheckedChange = {
-                    if (subManager.canAccessAutoAccept()) {
-                        autoAccept = it
-                        prefs.autoAccept = it
+                )
+                SettingRow(
+                    title = "Auto-Accept",
+                    subtitle = if (subManager.canAccessAutoAccept()) "Only for authorized provider integrations" else "PRO feature only",
+                    checked = autoAccept,
+                    onCheckedChange = {
+                        if (subManager.canAccessAutoAccept()) {
+                            autoAccept = it
+                            prefs.autoAccept = it
+                        }
                     }
-                }
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-            Button(
-                onClick = {
-                    val permissionsToRequest = mutableListOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    )
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                    permissionLauncher.launch(permissionsToRequest.toTypedArray())
-
-                    if (!permissionManager.hasOverlayPermission()) {
-                        permissionManager.openOverlaySettings()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Grant Required Permissions")
+                )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(onClick = { }, modifier = Modifier.fillMaxWidth()) {
-                Text("Connect Platforms")
+            item {
+                Button(
+                    onClick = {
+                        val permissionsToRequest = mutableListOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        permissionLauncher.launch(permissionsToRequest.toTypedArray())
+                        if (!permissionManager.hasOverlayPermission()) {
+                            permissionManager.openOverlaySettings()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Grant Required Permissions")
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Security: RidePilot never asks for third-party passwords or OTPs. Automatic acceptance requires an official provider API/partner authorization.",
-                style = MaterialTheme.typography.bodySmall
-            )
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text(
+                    text = "Matched Orders (${matchedOrders.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            items(matchedOrders) { order ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.outlinedCardColors()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(order.type.name, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text("₹${order.payoutInr}", fontWeight = FontWeight.Bold)
+                        }
+                        Text("${order.pickupAddress} -> ${order.dropAddress}", style = MaterialTheme.typography.bodyMedium)
+                        Text("${order.distanceKm} KM • Source: ${order.provider}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
         }
     }
 }
