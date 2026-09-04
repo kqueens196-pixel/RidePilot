@@ -1,21 +1,16 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+const db = require('./db');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-const logFilePath = path.join(__dirname, 'audit.log');
 
-// Audit logger helper
 function logAuditEvent(action, details) {
-    const timestamp = new Date().toISOString();
-    const line = `[${timestamp}] [AUDIT] ACTION=${action} | DETAILS=${JSON.stringify(details)}\n`;
-    fs.appendFileSync(logFilePath, line, 'utf8');
-    console.log(line.trim());
+    db.addAuditLog(action, details);
+    console.log(`[AUDIT] ACTION=${action} | DETAILS=${JSON.stringify(details)}`);
 }
 
 const otpStore = new Map();
@@ -35,22 +30,31 @@ app.post('/api/auth/send-otp', (req, res) => {
     res.json({ success: true, message: "OTP sent successfully (Use 123456 for test)" });
 });
 
-// 2. Verify OTP Endpoint
+// 2. Verify OTP & Store/Retrieve Rider
 app.post('/api/auth/verify-otp', (req, res) => {
     const { phone, otp } = req.body;
     const storedOtp = otpStore.get(phone);
 
     if (storedOtp && (storedOtp === otp || otp === "123456")) {
         otpStore.delete(phone);
+        const token = "mock-jwt-token-rider-" + phone;
+
+        const rider = db.saveRider(phone, {
+            token,
+            planName: "Pro Fleet Rider",
+            status: "ACTIVE",
+            daysRemaining: 28
+        });
+
         logAuditEvent('AUTH_LOGIN_SUCCESS', { phone });
         return res.json({
             success: true,
             message: "Authentication successful",
-            token: "mock-jwt-token-rider-" + phone,
+            token,
             subscription: {
-                status: "ACTIVE",
-                planName: "Pro Fleet Rider",
-                daysRemaining: 28
+                status: rider.status,
+                planName: rider.planName,
+                daysRemaining: rider.daysRemaining
             }
         });
     }
@@ -59,7 +63,7 @@ app.post('/api/auth/verify-otp', (req, res) => {
     res.status(401).json({ success: false, message: "Invalid or expired OTP" });
 });
 
-// 3. Order Feed
+// 3. Live Orders Feed
 app.get('/api/orders/feed', (req, res) => {
     const orders = [
         { id: "ORD-501", provider: "Rapido", type: "RIDE", pickup: "Hitech City", drop: "Gachibowli", distanceKm: 4.5, payoutInr: 180 },
@@ -70,13 +74,9 @@ app.get('/api/orders/feed', (req, res) => {
     res.json({ success: true, count: orders.length, orders });
 });
 
-// 4. Admin Audit Logs Endpoint
+// 4. Admin Audit Logs Endpoint (From DB)
 app.get('/api/admin/audit-logs', (req, res) => {
-    if (!fs.existsSync(logFilePath)) {
-        return res.json({ success: true, logs: [] });
-    }
-    const content = fs.readFileSync(logFilePath, 'utf8');
-    const logs = content.trim().split('\n');
+    const logs = db.getAuditLogs(50);
     res.json({ success: true, total: logs.length, logs });
 });
 
