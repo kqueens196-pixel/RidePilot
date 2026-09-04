@@ -44,8 +44,13 @@ class MainActivity : ComponentActivity() {
         subManager = SubscriptionManager(applicationContext)
 
         setContent {
-            RidePilotTheme {
-                MainScreenContent(prefs, subManager)
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = Color(0xFF0D1117)
+                ) {
+                    MainScreenContent(prefs, subManager)
+                }
             }
         }
     }
@@ -471,7 +476,4 @@ fun DashboardView(
                             Button(
                                 onClick = onOpenSubscription,
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
-                            ) {
-                                Text("Plans / Pay", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            }
-                     
+    
