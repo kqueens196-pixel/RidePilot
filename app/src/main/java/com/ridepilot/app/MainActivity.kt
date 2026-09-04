@@ -88,6 +88,7 @@ fun MainDashboard(
     var destRadiusKm by remember { mutableStateOf(prefs.destinationRadiusKm) }
     var maxPickupKm by remember { mutableStateOf(prefs.maxPickupKm) }
 
+    val waNum = "9347808890"
     val vehicleCategories = listOf(
         "Bike" to "🏍️",
         "Auto" to "🛺",
