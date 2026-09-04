@@ -39,7 +39,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
         subManager = SubscriptionManager(applicationContext)
 
         setContent {
-            val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { try { context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)) } catch (e: Exception) {} }
+            val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { try { this@MainActivity.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)) } catch (e: Exception) {} }
             androidx.compose.runtime.LaunchedEffect(Unit) { permLauncher.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS)) }
             RidePilotTheme {
                 var isLoggedIn by remember { mutableStateOf(prefs.isLoggedIn) }
@@ -337,7 +337,7 @@ fun MainDashboard(
                                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                         data = Uri.fromParts("package", context.packageName, null)
                                     }
-                                    context.startActivity(intent)
+                                    this@MainActivity.startActivity(intent)
                                 },
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.weight(1f)
@@ -348,7 +348,7 @@ fun MainDashboard(
                             Button(
                                 onClick = {
                                     val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                    context.startActivity(intent)
+                                    this@MainActivity.startActivity(intent)
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
                                 shape = RoundedCornerShape(10.dp),
