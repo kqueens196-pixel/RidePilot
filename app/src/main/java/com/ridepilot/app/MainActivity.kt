@@ -69,18 +69,19 @@ fun MainDashboard(
     val context = LocalContext.current
     val permissionManager = remember { PermissionManager(context) }
     val matchingEngine = remember { OrderMatchingEngine(prefs, subManager) }
+    val providerManager = remember { ProviderManager() }
 
     var vehicle by remember { mutableStateOf(prefs.vehicle) }
     var radius by remember { mutableStateOf(prefs.radius) }
     var parcelMode by remember { mutableStateOf(prefs.parcelMode) }
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
+    var showPlatformDialog by remember { mutableStateOf(false) }
 
-    // Dummy Mock Orders to test matching rules
     val allOrders = remember {
         listOf(
-            NormalizedOrder("ORD-101", "Partner API", OrderType.RIDE, "MG Road", "Airport", 4.2, 320.0),
-            NormalizedOrder("ORD-102", "Partner API", OrderType.PARCEL, "Indiranagar", "Koramangala", 3.0, 150.0),
-            NormalizedOrder("ORD-103", "Partner API", OrderType.PARCEL, "Whitefield", "Electronic City", 18.5, 450.0)
+            NormalizedOrder("ORD-101", "Rapido", OrderType.RIDE, "MG Road", "Airport", 4.2, 320.0),
+            NormalizedOrder("ORD-102", "Porter", OrderType.PARCEL, "Indiranagar", "Koramangala", 3.0, 150.0),
+            NormalizedOrder("ORD-103", "Uber", OrderType.PARCEL, "Whitefield", "Electronic City", 18.5, 450.0)
         )
     }
 
@@ -208,6 +209,15 @@ fun MainDashboard(
             }
 
             item {
+                OutlinedButton(
+                    onClick = { showPlatformDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Connect Platforms")
+                }
+            }
+
+            item {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 Text(
                     text = "Matched Orders (${matchedOrders.size})",
@@ -234,6 +244,41 @@ fun MainDashboard(
                     }
                 }
             }
+        }
+
+        if (showPlatformDialog) {
+            AlertDialog(
+                onDismissRequest = { showPlatformDialog = false },
+                title = { Text("Connect Partner Platforms") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "RidePilot connects only through authorized partner OAuth or official device integrations.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        providerManager.getAvailableProviders().forEach { provider ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(provider.name, fontWeight = FontWeight.Medium)
+                                FilledTonalButton(onClick = {
+                                    Toast.makeText(context, "${provider.name} auth initiated", Toast.LENGTH_SHORT).show()
+                                }) {
+                                    Text("Link")
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showPlatformDialog = false }) {
+                        Text("Close")
+                    }
+                }
+            )
         }
     }
 }
