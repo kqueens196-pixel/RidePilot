@@ -18,7 +18,6 @@ class PreferencesManager(context: Context) {
         get() = prefs.getString("vehicle", "Bike") ?: "Bike"
         set(value) = prefs.edit().putString("vehicle", value).apply()
 
-    // Mode: "Both", "Only Ride", "Only Parcel"
     var serviceMode: String
         get() = prefs.getString("service_mode", "Both") ?: "Both"
         set(value) = prefs.edit().putString("service_mode", value).apply()

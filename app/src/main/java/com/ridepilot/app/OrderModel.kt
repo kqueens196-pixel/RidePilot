@@ -20,15 +20,13 @@ class OrderMatchingEngine(
     private val subManager: SubscriptionManager
 ) {
     fun isOrderMatched(order: NormalizedOrder): Boolean {
-        // 1. Service Mode Filter (Both, Only Ride, Only Parcel)
         val matchesMode = when (prefs.serviceMode) {
             "Only Ride" -> order.type == OrderType.RIDE
             "Only Parcel" -> order.type == OrderType.PARCEL
-            else -> true // Both
+            else -> true
         }
         if (!matchesMode) return false
 
-        // 2. Distance KM Radius Filter
         val maxAllowedKm = if (order.type == OrderType.RIDE) {
             parseRadius(prefs.rideRadius)
         } else {
