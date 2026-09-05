@@ -446,4 +446,94 @@ fun PremiumDashboardView(
                         Text("🎯 VEHICLE & ROUTE FILTER", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 13.sp)
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-             
+lignment = Alignment.CenterVertically) {
+                            Text("🛵 Bike Rides Only", color = Color.White, fontSize = 13.sp)
+                            Switch(checked = isRideOnly, onCheckedChange = { isRideOnly = it; prefs.isRideEnabled = it })
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("📦 Parcel Deliveries Only", color = Color.White, fontSize = 13.sp)
+                            Switch(checked = isParcelOnly, onCheckedChange = { isParcelOnly = it; prefs.isParcelEnabled = it })
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("🔄 Smart Combo (Drop on path)", color = Color.White, fontSize = 13.sp)
+                            Switch(checked = isCombo, onCheckedChange = { isCombo = it; prefs.isComboRouteEnabled = it })
+                        }
+
+                        Divider(color = Color(0xFF263545), thickness = 1.dp)
+
+                        val radiusKmInt = maxKm.toInt()
+                        Text("Max Pickup Radius: " + radiusKmInt + " KM", color = Color(0xFFFFD54F), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            listOf(1.0f, 2.0f, 3.0f, 5.0f).forEach { km ->
+                                val kmInt = km.toInt()
+                                OutlinedButton(
+                                    onClick = { maxKm = km; prefs.maxPickupKm = km },
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = if (maxKm == km) Color(0xFF00E676) else Color.Transparent
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Text(kmInt.toString() + " KM", fontSize = 11.sp, color = if (maxKm == km) Color.Black else Color.White, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Auto-Accept Master Switch
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF101721)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("⚡ Instant Auto-Accept Master", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Switch(checked = autoAccept, onCheckedChange = { autoAccept = it; prefs.autoAccept = it })
+                        }
+                        Text("Rapido • Porter • Swiggy • Zomato • Uber • Zepto • Blinkit", color = Color(0xFF90CAF9), fontSize = 11.sp)
+                    }
+                }
+            }
+
+            // Live Orders Accepted Banner
+            item {
+                Text("📍 ACCEPTED ORDERS (LIVE EARNINGS)", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+
+            if (tripLogs.isEmpty()) {
+                item {
+                    Text("Auto-pilot scanning orders in real-time...", color = Color.Gray, fontSize = 12.sp)
+                }
+            } else {
+                items(tripLogs) { trip ->
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1F17)),
+                        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF00E676).copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(trip.provider.uppercase(), color = Color(0xFF00E676), fontWeight = FontWeight.Black, fontSize = 14.sp)
+                                Text(trip.fare, color = Color(0xFF00E676), fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            }
+                            Text("🟢 Pickup: " + trip.pickup, color = Color.White, fontSize = 12.sp)
+                            Text("🔴 Drop: " + trip.drop, color = Color(0xFFFFD54F), fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+        }
+    }
+    }
