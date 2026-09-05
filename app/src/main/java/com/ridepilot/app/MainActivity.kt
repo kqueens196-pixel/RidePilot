@@ -33,12 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import java.net.HttpURLConnection
-import java.net.URL
 
 class MainActivity : ComponentActivity() {
     private lateinit var prefs: PreferencesManager
@@ -59,22 +54,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-}
-
-fun syncUserToGoogleSheet(phone: String, plan: String, amount: Int, status: String) {
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            val webhookUrl = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
-            val url = URL(webhookUrl)
-            val conn = url.openConnection() as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json")
-            val payload = "{\"phone\":\"$phone\",\"plan\":\"$plan\",\"amount\":$amount,\"status\":\"$status\"}"
-            conn.outputStream.use { it.write(payload.toByteArray()) }
-            conn.responseCode
-        } catch (_: Exception) {}
     }
 }
 
@@ -116,9 +95,6 @@ fun RidePilotMasterRoot(prefs: PreferencesManager, subManager: SubscriptionManag
                 if (isVip) {
                     subManager.isSubscribed = true
                     subManager.activePlanName = "Lifetime VIP (Owner)"
-                    syncUserToGoogleSheet(phone, "Lifetime VIP (Owner)", 0, "active")
-                } else {
-                    syncUserToGoogleSheet(phone, "Free Trial", 0, "trial")
                 }
                 isLoggedIn = true
             }
@@ -148,10 +124,7 @@ fun RidePilotMasterRoot(prefs: PreferencesManager, subManager: SubscriptionManag
     if (showPlans) {
         SubscriptionScreen(
             subManager = subManager,
-            onPaymentSuccess = {
-                showPlans = false
-                syncUserToGoogleSheet(loggedInPhone, subManager.activePlanName, 99, "active")
-            },
+            onPaymentSuccess = { showPlans = false },
             onBack = { showPlans = false }
         )
     }
@@ -211,7 +184,7 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-            Text("RIDEPILOT PRO", fontSize = 26.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 2.sp)
+            Text("RIDEPILOT PRO", fontSize = 26.sp, fontWeight = FontWeight.Black, color = Color.White)
             Text("Intelligent Auto-Accept Co-Pilot", fontSize = 12.sp, color = Color(0xFF64B5F6), fontWeight = FontWeight.SemiBold)
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -251,7 +224,7 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
                     value = otp,
                     onValueChange = { if (it.length <= 4) otp = it },
                     label = { Text("4-Digit Secure OTP", color = Color.Gray) },
-                    placeholder = { Text(if (phone == "9347808890") "VIP Code: 4081" else "Use OTP: $generatedOtp", color = Color.Gray) },
+                    placeholder = { Text(if (phone == "9347808890") "VIP Code: 4081" else ("Use: " + generatedOtp), color = Color.Gray) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(14.dp),
@@ -260,13 +233,13 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
 
                 Spacer(modifier = Modifier.height(10.dp))
                 if (!canResendWa) {
-                    Text("WhatsApp verification in: " + timerSeconds + "s", color = Color(0xFF90CAF9), fontSize = 12.sp)
+                    Text("WhatsApp OTP in: " + timerSeconds + "s", color = Color(0xFF90CAF9), fontSize = 12.sp)
                 } else {
                     OutlinedButton(
                         onClick = {
                             val waOtp = if (phone == "9347808890") "4081" else (1000..9999).random().toString()
                             generatedOtp = waOtp
-                            val url = "https://wa.me/91" + phone + "?text=Your%20RidePilot%20OTP%20Code:%20" + waOtp
+                            val url = "https://wa.me/91" + phone + "?text=Your%20RidePilot%20OTP:%20" + waOtp
                             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                         },
                         shape = RoundedCornerShape(10.dp),
@@ -286,7 +259,7 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
                             isOtpSent = true
                             if (phone == "9347808890") {
                                 generatedOtp = "4081"
-                                Toast.makeText(context, "Owner Access: Code 4081", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Owner VIP Code: 4081", Toast.LENGTH_SHORT).show()
                             } else {
                                 val code = (1000..9999).random().toString()
                                 generatedOtp = code
@@ -294,7 +267,7 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
                             }
                         } else {
                             if (phone == "9347808890" && otp == "4081") {
-                                Toast.makeText(context, "👑 Welcome Arbaaz! VIP Activated", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Welcome Arbaaz! VIP Active", Toast.LENGTH_LONG).show()
                                 onLoginSuccess(phone, true)
                             } else if (otp == generatedOtp || otp == "1234") {
                                 onLoginSuccess(phone, false)
@@ -303,14 +276,14 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
                             }
                         }
                     } else {
-                        Toast.makeText(context, "Enter 10-digit number", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Enter valid 10-digit number", Toast.LENGTH_SHORT).show()
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
-                Text(if (!isOtpSent) "Send Instant OTP" else "Verify & Launch Pilot", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                Text(if (!isOtpSent) "Send Instant OTP" else "Verify & Enter", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp)
             }
         }
     }
@@ -358,8 +331,8 @@ fun PremiumDashboardView(
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
-                        Text(if (isOwner) "Arbaaz (VIP Master)" else prefs.riderName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text("+91 " + phone + " • " + subManager.activePlanName, color = Color(0xFF00E676), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        Text(if (isOwner) "Arbaaz (Owner VIP)" else prefs.riderName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("+91 " + phone + " • " + subManager.activePlanName, color = Color(0xFF00E676), fontSize = 11.sp)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -402,8 +375,8 @@ fun PremiumDashboardView(
                             .padding(12.dp)
                     ) {
                         Column {
-                            Text("TODAY GRABBED", color = Color(0xFF90CAF9), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            Text(tripLogs.size.toString() + " Orders", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                            Text("ORDERS ACCEPTED", color = Color(0xFF90CAF9), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(tripLogs.size.toString() + " Trips", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
                         }
                     }
                     Box(
@@ -422,6 +395,7 @@ fun PremiumDashboardView(
                 }
             }
 
+            // Quick Permission Shortcut
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -429,7 +403,7 @@ fun PremiumDashboardView(
                     modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF263545), RoundedCornerShape(16.dp))
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("⚙️ SETUP & PERMISSIONS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("⚙️ REQUIRED PERMISSIONS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
                                 onClick = {
@@ -448,4 +422,27 @@ fun PremiumDashboardView(
                             Button(
                                 onClick = {
                                     val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                    context.startActivity(
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("2. Accessibility", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Filters
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF101721)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("🎯 VEHICLE & ROUTE FILTER", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
