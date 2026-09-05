@@ -57,6 +57,7 @@ fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager
     var loggedInPhone by remember { mutableStateOf(prefs.riderPhone) }
     var showVideoGuide by remember { mutableStateOf(false) }
     var showSubscription by remember { mutableStateOf(false) }
+    var showAdminDashboard by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -100,6 +101,7 @@ fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager
             isOwner = isOwner,
             onOpenGuide = { showVideoGuide = true },
             onOpenPlans = { showSubscription = true },
+            onOpenAdmin = { showAdminDashboard = true },
             onLogout = {
                 prefs.clearSession()
                 isLoggedIn = false
@@ -107,6 +109,9 @@ fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager
         )
     }
 
+    if (showAdminDashboard) {
+        InAppAdminPortal(onClose = { showAdminDashboard = false })
+    }
     if (showVideoGuide) {
         VideoGuideScreen(onClose = { showVideoGuide = false })
     }
@@ -127,6 +132,7 @@ fun MainDashboardUI(
     isOwner: Boolean,
     onOpenGuide: () -> Unit,
     onOpenPlans: () -> Unit,
+    onOpenAdmin: () -> Unit,
     onLogout: () -> Unit
 ) {
     var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
@@ -144,7 +150,7 @@ fun MainDashboardUI(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -152,9 +158,25 @@ fun MainDashboardUI(
                     Text(prefs.riderName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text("+91 " + phone + " • " + subManager.activePlanName, color = Color(0xFF00E676), fontSize = 11.sp)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton(onClick = onOpenGuide) { Text("🎬 Guide", fontSize = 11.sp) }
-                    TextButton(onClick = onLogout) { Text("Logout", color = Color(0xFFFF5252), fontSize = 12.sp) }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (isOwner) {
+                        Button(
+                            onClick = onOpenAdmin,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD54F)),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("👑 Admin", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    FilledTonalButton(
+                        onClick = onOpenGuide,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("🎬 Guide", fontSize = 11.sp)
+                    }
+                    TextButton(onClick = onLogout) {
+                        Text("Logout", color = Color(0xFFFF5252), fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -194,7 +216,7 @@ fun MainDashboardUI(
                 }
             }
 
-            // Permissions Quick Access Card
+            // Permissions 1-Click Card
             item {
                 Card(
                     shape = RoundedCornerShape(14.dp),
@@ -206,18 +228,11 @@ fun MainDashboardUI(
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
                                 onClick = {
-                                    try {
-                                        val intent = Intent("android.settings.APPLICATION_DETAILS_SETTINGS").apply {
-                                            data = Uri.parse("package:" + context.packageName)
-                                        }
-                                        context.startActivity(intent)
-                                        Toast.makeText(context, "Top-Right 3-Dots > Allow Restricted Settings", Toast.LENGTH_LONG).show()
-                                    } catch (e: Exception) {
-                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                            data = Uri.fromParts("package", context.packageName, null)
-                                        }
-                                        context.startActivity(intent)
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
                                     }
+                                    context.startActivity(intent)
+                                    Toast.makeText(context, "Top-Right 3-Dots > Allow Restricted Settings", Toast.LENGTH_LONG).show()
                                 },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(8.dp)
@@ -241,7 +256,7 @@ fun MainDashboardUI(
                 }
             }
 
-            // Order Filters (Bike Only / Parcel Only / Combo & Distance)
+            // Order Filters & Routing
             item {
                 Card(
                     shape = RoundedCornerShape(14.dp),
@@ -282,7 +297,7 @@ fun MainDashboardUI(
                 }
             }
 
-            // Auto-Accept Switch Card
+            // Auto-Accept Switch
             item {
                 Card(
                     shape = RoundedCornerShape(14.dp),
@@ -309,7 +324,7 @@ fun MainDashboardUI(
                 }
             }
 
-            // Live Order Logs with Earnings & Address Banner
+            // Live Accepted Order Banner & Logs
             item {
                 Text("📍 ACCEPTED ORDERS (LIVE EARNINGS LOG)", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
@@ -343,3 +358,65 @@ fun MainDashboardUI(
         }
     }
 }
+
+data class DriverRecord(val phone: String, val plan: String, val amount: Int, var isActive: Boolean)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun InAppAdminPortal(onClose: () -> Unit) {
+    val drivers = remember {
+        mutableStateListOf(
+            DriverRecord("9347808890", "Lifetime VIP (Owner)", 0, true),
+            DriverRecord("9848022338", "Monthly Plan", 99, true),
+            DriverRecord("9123456789", "10 Days Plan", 50, false),
+            DriverRecord("9988776655", "Daily Pass", 10, true)
+        )
+    }
+
+    val totalDrivers = drivers.size
+    val activeCount = drivers.count { it.isActive }
+    val totalRevenue = drivers.sumOf { it.amount }
+
+    Scaffold(
+        containerColor = Color(0xFF0D1117),
+        topBar = {
+            TopAppBar(
+                title = { Text("⚡ RidePilot Master Admin", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF161B22)),
+                actions = {
+                    TextButton(onClick = onClose) {
+                        Text("Close", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22))) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text("Total Drivers", color = Color.Gray, fontSize = 10.sp)
+                            Text(totalDrivers.toString(), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = Color(0xFF16251E))) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text("Active VIP", color = Color(0xFF00E676), fontSize = 10.sp)
+                            Text(activeCount.toString(), color = Color(0xFF00E676), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Card(modifier = Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2111))) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text("Total Sales", color = Color(0xFFFFD54F), fontSize = 10.sp)
+                            Text("₹$totalRevenue", color = Color(0xFFFFD54F), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            item {
+                Text("DRIVER LIST & CONTROLS", color = Color.White, fontWeigh
