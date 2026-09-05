@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RidePilot Admin Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDummyKeyForNow",
+            authDomain: "ridepilot.firebaseapp.com",
+            projectId: "ridepilot",
+            storageBucket: "ridepilot.appspot.com",
+            messagingSenderId: "123456",
+            appId: "1:123456:web:abcdef"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Dummy Live Data tab tak ke liye jab tak users cloud se na judein
+        const mockDrivers = [
+            { id: "1", phone: "9347808890", plan: "Lifetime VIP (Owner)", amount: 0, status: "active", expiry: "Lifetime" },
+            { id: "2", phone: "9848022338", plan: "Monthly Plan", amount: 99, status: "active", expiry: "05-10-2026" },
+            { id: "3", phone: "9123456789", plan: "10 Days Plan", amount: 50, status: "inactive", expiry: "Expired" }
+        ];
+
+        function renderData(drivers) {
+            let total = drivers.length;
+            let active = drivers.filter(d => d.status === 'active').length;
+            let sales = drivers.reduce((sum, d) => sum + d.amount, 0);
+
+            document.getElementById("total-users").innerText = total;
+            document.getElementById("active-subs").innerText = active;
+            document.getElementById("total-sales").innerText = "₹" + sales;
+
+            let rows = "";
+            drivers.forEach(d => {
+                rows += `
+                <tr class="border-b border-gray-800">
+                    <td class="p-3 font-mono font-bold text-green-400">+91 ${d.phone}</td>
+                    <td class="p-3 text-white">${d.plan}</td>
+                    <td class="p-3 font-bold text-yellow-400">₹${d.amount}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded text-xs font-bold ${d.status === 'active' ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}">
+                            ${d.status.toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="p-3 text-xs text-gray-400">${d.expiry}</td>
+                    <td class="p-3">
+                        <button onclick="alert('Status updated for +91 ${d.phone}')" class="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-600 px-3 py-1 rounded text-white font-bold">
+                            ${d.status === 'active' ? 'Block User' : 'Activate VIP'}
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById("users-table-body").innerHTML = rows;
+        }
+
+        window.onload = () => renderData(mockDrivers);
+    </script>
+</head>
+<body class="bg-gray-950 text-gray-200 font-sans p-4 md:p-6 min-h-screen">
+    <div class="max-w-5xl mx-auto space-y-6">
+        <div class="flex justify-between items-center border-b border-gray-800 pb-4">
+            <div>
+                <h1 class="text-2xl font-black text-green-400">⚡ RidePilot Admin Portal</h1>
+                <p class="text-xs text-gray-400">Live Driver Monitoring & Membership Sales</p>
+            </div>
+            <div class="bg-gray-900 border border-green-500/30 px-3 py-1.5 rounded-lg text-right">
+                <span class="text-xs text-gray-400 block">Owner Control</span>
+                <span class="text-sm font-bold text-green-400">Arbaaz (+91 9347808890)</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl">
+                <p class="text-xs font-semibold text-gray-400 uppercase">Total Drivers</p>
+                <h3 id="total-users" class="text-3xl font-black text-white mt-1">0</h3>
+            </div>
+            <div class="bg-gray-900 border border-green-900/50 p-4 rounded-xl">
+                <p class="text-xs font-semibold text-green-400 uppercase">Active Subscriptions</p>
+                <h3 id="active-subs" class="text-3xl font-black text-green-400 mt-1">0</h3>
+            </div>
+            <div class="bg-gray-900 border border-yellow-900/50 p-4 rounded-xl">
+                <p class="text-xs font-semibold text-yellow-400 uppercase">Total Revenue</p>
+                <h3 id="total-sales" class="text-3xl font-black text-yellow-400 mt-1">₹0</h3>
+            </div>
+        </div>
+
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div class="p-4 border-b border-gray-800 flex justify-between items-center">
+                <h2 class="font-bold text-white text-base">Registered Drivers & Plans</h2>
+                <span class="text-xs bg-green-500/10 text-green-400 px-2 py-1 rounded border border-green-500/20">● Live Controller</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-950 text-gray-400 text-xs border-b border-gray-800 uppercase">
+                            <th class="p-3">Phone</th>
+                            <th class="p-3">Plan</th>
+                            <th class="p-3">Amount</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3">Validity</th>
+                            <th class="p-3">Control</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
