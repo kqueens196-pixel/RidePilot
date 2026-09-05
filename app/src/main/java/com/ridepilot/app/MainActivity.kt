@@ -445,4 +445,10 @@ fun PremiumDashboardView(
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("🛵 Bike Rides Only", color = Color.White)
-                        } 
+                        }
+        }
+        }
+        }
+        }
+        }
+        }
