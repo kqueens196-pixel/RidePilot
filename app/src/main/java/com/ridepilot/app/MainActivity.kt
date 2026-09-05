@@ -3,6 +3,7 @@ package com.ridepilot.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,10 +23,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     private lateinit var prefs: PreferencesManager
@@ -50,18 +48,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-enum class IdSelectLang(val label: String) {
-    HI("हिन्दी (Hindi)"),
-    TE("తెలుగు"),
-    TA("தமிழ்"),
-    KA("ಕನ್ನಡ"),
-    MR("मराठी"),
-    EN("English")
-}
-
 @Composable
 fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager) {
-    var currentLang by remember { mutableStateOf(IdSelectLang.HI) }
     var isLoggedIn by remember { mutableStateOf(prefs.isLoggedIn) }
     var loggedInPhone by remember { mutableStateOf(prefs.riderPhone) }
     var showVideoGuide by remember { mutableStateOf(false) }
@@ -74,14 +62,12 @@ fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager
     }
 
     if (!isLoggedIn) {
-        AuthScreenUI(
-            currentLang = currentLang,
-            onLangSelected = { currentLang = it },
-            onLoginSuccess = { phone, isVip ->
+        LoginScreen(
+            onLoginSuccess = { phone ->
                 prefs.isLoggedIn = true
                 prefs.riderPhone = phone
                 loggedInPhone = phone
-                if (isVip) {
+                if (phone == "9347808890") {
                     subManager.isSubscribed = true
                     subManager.activePlanName = "Lifetime VIP (Owner)"
                 }
@@ -112,145 +98,6 @@ fun MainScreenContent(prefs: PreferencesManager, subManager: SubscriptionManager
             onPaymentSuccess = { showSubscription = false },
             onBack = { showSubscription = false }
         )
-    }
-}
-
-@Composable
-fun AuthScreenUI(
-    currentLang: IdSelectLang,
-    onLangSelected: (IdSelectLang) -> Unit,
-    onLoginSuccess: (String, Boolean) -> Unit
-) {
-    var phone by remember { mutableStateOf("") }
-    var enteredOtp by remember { mutableStateOf("") }
-    var generatedOtp by remember { mutableStateOf("") }
-    var isOtpSent by remember { mutableStateOf(false) }
-    var timerSeconds by remember { mutableStateOf(60) }
-    var canResendWa by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-
-    LaunchedEffect(isOtpSent) {
-        if (isOtpSent) {
-            timerSeconds = 60
-            canResendWa = false
-            while (timerSeconds > 0) {
-                delay(1000L)
-                timerSeconds--
-            }
-            canResendWa = true
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0D1117))
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("⚡ RidePilot Pro", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF00E676))
-        Text("All Delivery & Cab Auto-Accept", fontSize = 13.sp, color = Color(0xFF8B949E))
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("Select Language / भाषा चुनें:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(IdSelectLang.values()) { lang ->
-                val isSel = (currentLang == lang)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSel) Color(0xFF00E676) else Color(0xFF161B22))
-                        .border(1.dp, if (isSel) Color(0xFF00E676) else Color(0xFF30363D), RoundedCornerShape(8.dp))
-                        .clickable { onLangSelected(lang) }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(lang.label, color = if (isSel) Color.Black else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        OutlinedTextField(
-            value = phone,
-            onValueChange = { if (it.length <= 10) phone = it },
-            label = { Text("Mobile Number") },
-            prefix = { Text("+91 ") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (isOtpSent) {
-            Spacer(modifier = Modifier.height(14.dp))
-            OutlinedTextField(
-                value = enteredOtp,
-                onValueChange = { if (it.length <= 4) enteredOtp = it },
-                label = { Text("Enter 4-Digit OTP") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-            if (!canResendWa) {
-                Text("WhatsApp OTP in: " + timerSeconds + "s", color = Color(0xFF8B949E), fontSize = 12.sp)
-            } else {
-                OutlinedButton(
-                    onClick = {
-                        val otp = if (phone == "9347808890") "4081" else (1000..9999).random().toString()
-                        generatedOtp = otp
-                        val waUrl = "https://wa.me/91" + phone + "?text=RidePilot%20OTP:%20" + otp
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(waUrl)))
-                        Toast.makeText(context, "WhatsApp OTP Sent!", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("📲 Send OTP via WhatsApp", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(
-            onClick = {
-                if (phone.length == 10) {
-                    if (!isOtpSent) {
-                        isOtpSent = true
-                        if (phone == "9347808890") {
-                            generatedOtp = "4081"
-                            Toast.makeText(context, "Owner VIP Login: Secret 4081", Toast.LENGTH_LONG).show()
-                        } else {
-                            val code = (1000..9999).random().toString()
-                            generatedOtp = code
-                            Toast.makeText(context, "SMS OTP: " + code, Toast.LENGTH_LONG).show()
-                        }
-                    } else {
-                        if (phone == "9347808890" && enteredOtp == "4081") {
-                            Toast.makeText(context, "Hello Arbaaz! VIP Login Active", Toast.LENGTH_LONG).show()
-                            onLoginSuccess(phone, true)
-                        } else if (enteredOtp.isNotEmpty() && (enteredOtp == generatedOtp || enteredOtp == "1234")) {
-                            Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                            onLoginSuccess(phone, false)
-                        } else {
-                            Toast.makeText(context, "Invalid OTP!", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                } else {
-                    Toast.makeText(context, "10-digit mobile daalein", Toast.LENGTH_SHORT).show()
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Text(if (!isOtpSent) "Send OTP" else "Verify & Login", color = Color.Black, fontWeight = FontWeight.Bold)
-        }
     }
 }
 
@@ -294,9 +141,10 @@ fun MainDashboardUI(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // VIP Plan Card
             item {
                 Card(
                     shape = RoundedCornerShape(14.dp),
@@ -324,6 +172,51 @@ fun MainDashboardUI(
                 }
             }
 
+            // Permissions Card (DIRECT 1-CLICK ACTIONS)
+            item {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                    modifier = Modifier.fillMaxWidth().border(1.dp, Color(0xFF30363D), RoundedCornerShape(14.dp))
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("⚙️ REQUIRED PERMISSIONS", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Auto-accept setup karne ke liye dono permissions allow karein:", color = Color(0xFF8B949E), fontSize = 11.sp)
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Button 1: Restricted Settings unlock
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                    }
+                                    context.startActivity(intent)
+                                    Toast.makeText(context, "Top-Right 3-Dots > Allow Restricted Settings karein", Toast.LENGTH_LONG).show()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("1. Restricted", fontSize = 12.sp, color = Color.White)
+                            }
+
+                            // Button 2: Accessibility ON
+                            Button(
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("2. Accessibility", fontSize = 12.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Auto-Accept Switch Card
             item {
                 Card(
                     shape = RoundedCornerShape(14.dp),
@@ -350,6 +243,7 @@ fun MainDashboardUI(
                 }
             }
 
+            // WhatsApp Support Card
             item {
                 Card(
                     shape = RoundedCornerShape(14.dp),
@@ -368,6 +262,7 @@ fun MainDashboardUI(
                 }
             }
 
+            // Live Order Logs
             item {
                 Text("📍 ACCEPTED ORDERS (LIVE LOG)", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
@@ -387,6 +282,10 @@ fun MainDashboardUI(
                         Text("Drop: " + trip.drop, color = Color(0xFFFFD54F), fontSize = 12.sp)
                     }
                 }
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }
