@@ -26,7 +26,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -63,18 +62,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Background Sheet Sync
 fun syncUserToGoogleSheet(phone: String, plan: String, amount: Int, status: String) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            // Yahan apna Google Apps Script Web App URL paste karein agar available ho
             val webhookUrl = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
             val url = URL(webhookUrl)
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", "application/json")
-            val payload = """{"phone":"$phone","plan":"$plan","amount":$amount,"status":"$status"}"""
+            val payload = "{\"phone\":\"$phone\",\"plan\":\"$plan\",\"amount\":$amount,\"status\":\"$status\"}"
             conn.outputStream.use { it.write(payload.toByteArray()) }
             conn.responseCode
         } catch (_: Exception) {}
@@ -202,13 +199,11 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Neon Brand Icon
             Box(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(22.dp))
                     .background(Brush.linearGradient(listOf(Color(0xFF00E676), Color(0xFF00897B))))
-                    .shadow(16.dp, RoundedCornerShape(22.dp))
                     .border(2.dp, Color(0xFF69F0AE), RoundedCornerShape(22.dp)),
                 contentAlignment = Alignment.Center
             ) {
@@ -221,7 +216,6 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Regional Language Selector
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(languages) { lang ->
                     val isSel = (selectedLang == lang)
@@ -240,7 +234,6 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Phone Input
             OutlinedTextField(
                 value = phone,
                 onValueChange = { if (it.length <= 10) phone = it },
@@ -248,12 +241,6 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
                 prefix = { Text("+91 ", color = Color(0xFF00E676), fontWeight = FontWeight.Bold) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color(0xFF00E676),
-                    unfocusedBorderColor = Color(0xFF263545)
-                ),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -267,12 +254,6 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
                     placeholder = { Text(if (phone == "9347808890") "VIP Code: 4081" else "Use OTP: $generatedOtp", color = Color.Gray) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF00E676),
-                        unfocusedBorderColor = Color(0xFF263545)
-                    ),
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -410,7 +391,6 @@ fun PremiumDashboardView(
             modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Live Stats Cards
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(
@@ -442,7 +422,6 @@ fun PremiumDashboardView(
                 }
             }
 
-            // Android Direct Permissions Fallback Card
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -454,4 +433,20 @@ fun PremiumDashboardView(
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
                                 onClick = {
-          
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                    }
+                                    context.startActivity(intent)
+                                    Toast.makeText(context, "Top-Right 3-Dots > Allow Restricted Settings", Toast.LENGTH_LONG).show()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("1. Restricted", fontSize = 11.sp, color = Color.White)
+                            }
+
+                            Button(
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                    context.startActivity(intent)
+                          
