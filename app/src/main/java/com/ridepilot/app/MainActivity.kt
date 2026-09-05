@@ -260,13 +260,13 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
 
                 Spacer(modifier = Modifier.height(10.dp))
                 if (!canResendWa) {
-                    Text("WhatsApp verification in: ${timerSeconds}s", color = Color(0xFF90CAF9), fontSize = 12.sp)
+                    Text("WhatsApp verification in: " + timerSeconds + "s", color = Color(0xFF90CAF9), fontSize = 12.sp)
                 } else {
                     OutlinedButton(
                         onClick = {
                             val waOtp = if (phone == "9347808890") "4081" else (1000..9999).random().toString()
                             generatedOtp = waOtp
-                            val url = "https://wa.me/91$phone?text=Your%20RidePilot%20OTP%20Code:%20$waOtp"
+                            val url = "https://wa.me/91" + phone + "?text=Your%20RidePilot%20OTP%20Code:%20" + waOtp
                             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                         },
                         shape = RoundedCornerShape(10.dp),
@@ -290,7 +290,7 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
                             } else {
                                 val code = (1000..9999).random().toString()
                                 generatedOtp = code
-                                Toast.makeText(context, "OTP: $code", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "OTP: " + code, Toast.LENGTH_SHORT).show()
                             }
                         } else {
                             if (phone == "9347808890" && otp == "4081") {
@@ -359,7 +359,7 @@ fun PremiumDashboardView(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(if (isOwner) "Arbaaz (VIP Master)" else prefs.riderName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text("+91 $phone • ${subManager.activePlanName}", color = Color(0xFF00E676), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        Text("+91 " + phone + " • " + subManager.activePlanName, color = Color(0xFF00E676), fontSize = 11.sp, fontWeight = FontWeight.Medium)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -403,7 +403,7 @@ fun PremiumDashboardView(
                     ) {
                         Column {
                             Text("TODAY GRABBED", color = Color(0xFF90CAF9), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            Text("${tripLogs.size} Orders", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                            Text(tripLogs.size.toString() + " Orders", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
                         }
                     }
                     Box(
@@ -448,5 +448,4 @@ fun PremiumDashboardView(
                             Button(
                                 onClick = {
                                     val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                    context.startActivity(intent)
-                          
+                                    context.startActivity(
