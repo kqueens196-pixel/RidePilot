@@ -444,4 +444,4 @@ fun PremiumDashboardView(
                         Text("🎯 VEHICLE & ROUTE FILTER", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, fontSize = 13.sp)
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("🛵 Bike Rides Only", color = 
+                            Text("🛵 Bike Rides Only", color = Color.White) 
