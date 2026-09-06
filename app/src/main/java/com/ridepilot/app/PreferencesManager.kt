@@ -79,4 +79,11 @@ class PreferencesManager(context: Context) {
     fun clearSession() {
         prefs.edit().clear().apply()
     }
+
+    fun addTripLog(provider: String, fare: String, pickup: String, drop: String) {
+        val trips = getAcceptedTrips().toMutableList()
+        trips.add(TripLog(provider, fare, pickup, drop))
+        // save logic handled by prefs or local list
+    }
+
 }
