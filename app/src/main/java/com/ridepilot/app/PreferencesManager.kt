@@ -1,97 +1,53 @@
 package com.ridepilot.app
 
-
-
-
 import android.content.Context
 import android.content.SharedPreferences
 
 data class AcceptedTrip(
-    val id: String = System.currentTimeMillis().toString(),
-    val provider: String = "Order",
-    val fare: String = "₹0",
-    val pickup: String = "",
-    val drop: String = "",
-    val time: String = System.currentTimeMillis().toString()
+    val provider: String,
+    val fare: String,
+    val pickup: String,
+    val drop: String
 )
 
 class PreferencesManager(context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("RidePilotPrefs", Context.MODE_PRIVATE)
-
-    var isLoggedIn: Boolean
-        get() = prefs.getBoolean("is_logged_in", false)
-        set(value) = prefs.edit().putBoolean("is_logged_in", value).apply()
-
-    var riderPhone: String
-        get() = prefs.getString("rider_phone", "") ?: ""
-        set(value) = prefs.edit().putString("rider_phone", value).apply()
-
-    var riderName: String
-        get() = prefs.getString("rider_name", "Arbaaz (VIP)") ?: "Arbaaz (VIP)"
-        set(value) = prefs.edit().putString("rider_name", value).apply()
-
-    var vehicleType: String
-        get() = prefs.getString("vehicle_type", "Bike") ?: "Bike"
-        set(value) = prefs.edit().putString("vehicle_type", value).apply()
+    private val prefs: SharedPreferences = context.getSharedPreferences("ridepilot_prefs", Context.MODE_PRIVATE)
 
     var autoAccept: Boolean
-        get() = prefs.getBoolean("auto_accept_enabled", true)
-        set(value) = prefs.edit().putBoolean("auto_accept_enabled", value).apply()
+        get() = prefs.getBoolean("auto_accept", false)
+        set(value) = prefs.edit().putBoolean("auto_accept", value).apply()
 
     var maxPickupKm: Float
-        get() = prefs.getFloat("max_pickup_km", 5.0f)
+        get() = prefs.getFloat("max_pickup_km", 2.0f)
         set(value) = prefs.edit().putFloat("max_pickup_km", value).apply()
 
-    var isGoHomeEnabled: Boolean
-        get() = prefs.getBoolean("is_go_home_enabled", false)
-        set(value) = prefs.edit().putBoolean("is_go_home_enabled", value).apply()
-
-    var destinationAddress: String
-        get() = prefs.getString("destination_address", "") ?: ""
-        set(value) = prefs.edit().putString("destination_address", value).apply()
-
-    var destinationRadiusKm: Float
-        get() = prefs.getFloat("destination_radius_km", 5.0f)
-        set(value) = prefs.edit().putFloat("destination_radius_km", value).apply()
+    var isParcelEnabled: Boolean
+        get() = prefs.getBoolean("parcel_enabled", true)
+        set(value) = prefs.edit().putBoolean("parcel_enabled", value).apply()
 
     var isRideEnabled: Boolean
-        get() = prefs.getBoolean("is_ride_enabled", true)
-        set(value) = prefs.edit().putBoolean("is_ride_enabled", value).apply()
-
-    var isParcelEnabled: Boolean
-        get() = prefs.getBoolean("is_parcel_enabled", true)
-        set(value) = prefs.edit().putBoolean("is_parcel_enabled", value).apply()
-
-    var isComboRouteEnabled: Boolean
-        get() = prefs.getBoolean("is_combo_route_enabled", false)
-        set(value) = prefs.edit().putBoolean("is_combo_route_enabled", value).apply()
-
-    private val trips = mutableListOf<AcceptedTrip>()
-
-    fun addAcceptedTrip(trip: AcceptedTrip) {
-        trips.add(0, trip)
-    }
+        get() = prefs.getBoolean("ride_enabled", true)
+        set(value) = prefs.edit().putBoolean("ride_enabled", value).apply()
 
     fun getAcceptedTrips(): List<AcceptedTrip> {
-        return if (trips.isNotEmpty()) trips else listOf(
-            AcceptedTrip(provider = "Rapido", fare = "₹65", pickup = "Ameerpet Metro", drop = "Madhapur"),
-            AcceptedTrip(provider = "Porter", fare = "₹140", pickup = "Secunderabad", drop = "Hitec City")
-        )
-    }
-
-    fun clearSession() {
-        prefs.edit().clear().apply()
-    }
-
-    
-    fun addTripLog(provider: String, fare: String, pickup: String, drop: String) {
-        val trips = getAcceptedTrips().toMutableList()
-        trips.add(0, AcceptedTrip(provider, fare, pickup, drop))
-        val raw = trips.take(50).joinToString(";;") { "${it.provider}|${it.fare}|${it.pickup}|${it.drop}" }
-        prefs.edit().putString("accepted_trips_log", raw).apply()
+        val raw = prefs.getString("accepted_trips_log", "") ?: ""
+        if (raw.isBlank()) return emptyList()
+        return raw.split(";;").mapNotNull { item ->
+            val parts = item.split("|")
+            if (parts.size >= 4) {
+                AcceptedTrip(parts[0], parts[1], parts[2], parts[3])
+            } else null
+        }
     }
 
     fun addTripLog(trip: AcceptedTrip) {
-        addTripLog(trip.provider, trip.fare, trip.pickup, trip.drop)
+        val trips = getAcceptedTrips().toMutableList()
+        trips.add(0, trip)
+        val raw = trips.take(50).joinToString(";;") { it.provider + "|" + it.fare + "|" + it.pickup + "|" + it.drop }
+        prefs.edit().putString("accepted_trips_log", raw).apply()
+    }
+
+    fun addTripLog(provider: String, fare: String, pickup: String, drop: String) {
+        addTripLog(AcceptedTrip(provider, fare, pickup, drop))
     }
 }

@@ -31,7 +31,6 @@ class AutoAcceptService : AccessibilityService() {
 
         val rootNode = rootInActiveWindow ?: return
 
-        // Throttle to avoid duplicate rapid clicks
         val now = System.currentTimeMillis()
         if (now - lastAcceptTime < 2500) return
 
@@ -43,26 +42,22 @@ class AutoAcceptService : AccessibilityService() {
         collectText(root, allText)
         val combinedText = allText.joinToString(" ")
 
-        // Extract Fare
         var fare = "₹85"
         val fareMatcher = Pattern.compile("₹\\s*([0-9]+)").matcher(combinedText)
         if (fareMatcher.find()) {
             fare = "₹" + fareMatcher.group(1)
         }
 
-        // Extract Distance in KM
         var distanceKm = 1.5f
         val kmMatcher = Pattern.compile("([0-9]+(\\.[0-9]+)?)\\s*(km|KM)").matcher(combinedText)
         if (kmMatcher.find()) {
             distanceKm = kmMatcher.group(1)?.toFloatOrNull() ?: 1.5f
         }
 
-        // Filter Check: Skip if exceeds configured limit
         if (distanceKm > prefs.maxPickupKm) {
             return
         }
 
-        // Find and Click Accept Button
         val acceptKeywords = listOf("ACCEPT", "Accept", "ACCEPT ORDER", "SWIPE TO ACCEPT", "Accept Ride")
         val clicked = findAndClick(root, acceptKeywords)
 
@@ -78,11 +73,13 @@ class AutoAcceptService : AccessibilityService() {
                 else -> "Ride"
             }
 
-            prefs.addAcceptedTrip(
-                provider = providerName,
-                fare = fare,
-                pickup = "Pickup (~${distanceKm} KM)",
-                drop = "Customer Location"
+            prefs.addTripLog(
+                trip = AcceptedTrip(
+                    provider = providerName,
+                    fare = fare,
+                    pickup = "Pickup (~" + distanceKm + " KM)",
+                    drop = "Customer Location"
+                )
             )
         }
     }
