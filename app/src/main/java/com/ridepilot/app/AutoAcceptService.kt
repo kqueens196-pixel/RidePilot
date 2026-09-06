@@ -78,7 +78,7 @@ class AutoAcceptService : AccessibilityService() {
                 else -> "Ride"
             }
 
-            prefs.addTripLog(
+            prefs.addAcceptedTrip(
                 provider = providerName,
                 fare = fare,
                 pickup = "Pickup (~${distanceKm} KM)",

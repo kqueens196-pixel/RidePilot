@@ -1,6 +1,6 @@
 package com.ridepilot.app
 
-data class TripLog(val provider: String, val fare: String, val pickup: String, val drop: String)
+
 
 
 import android.content.Context
@@ -83,10 +83,11 @@ class PreferencesManager(context: Context) {
         prefs.edit().clear().apply()
     }
 
+    
     fun addTripLog(provider: String, fare: String, pickup: String, drop: String) {
         val trips = getAcceptedTrips().toMutableList()
-        trips.add(TripLog(provider, fare, pickup, drop))
-        // save logic handled by prefs or local list
+        trips.add(0, AcceptedTrip(provider, fare, pickup, drop))
+        val raw = trips.take(50).joinToString(";;") { "${it.provider}|${it.fare}|${it.pickup}|${it.drop}" }
+        prefs.edit().putString("accepted_trips_log", raw).apply()
     }
-
 }
