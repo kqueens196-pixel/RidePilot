@@ -1,5 +1,8 @@
 package com.ridepilot.app
 
+data class TripLog(val provider: String, val fare: String, val pickup: String, val drop: String)
+
+
 import android.content.Context
 import android.content.SharedPreferences
 
