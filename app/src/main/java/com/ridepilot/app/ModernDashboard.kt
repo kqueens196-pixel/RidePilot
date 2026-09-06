@@ -37,7 +37,10 @@ fun ModernDashboardView(
     var parcelOnly by remember { mutableStateOf(prefs.isParcelEnabled) }
 
     val tabs = listOf("Home", "Earnings", "Orders", "Profile")
-        val tripLogs = prefs.getAcceptedTrips()
+            val tripLogs = prefs.getAcceptedTrips()
+    val totalEarnings = tripLogs.mapNotNull { 
+        it.fare.replace("[^0-9]".toRegex(), "").toIntOrNull() 
+    }.sum()
     val totalEarnings = tripLogs.mapNotNull { 
         it.fare.replace("[^0-9]".toRegex(), "").toIntOrNull() 
     }.sum()
