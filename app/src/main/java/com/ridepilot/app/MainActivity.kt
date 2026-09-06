@@ -290,7 +290,7 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
 }
 
 @Composable
-fun ModernDashboardView(
+fun OldDashboardView(
     prefs: PreferencesManager,
     subManager: SubscriptionManager,
     phone: String,
