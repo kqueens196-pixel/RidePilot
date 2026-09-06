@@ -37,7 +37,10 @@ fun ModernDashboardView(
     var parcelOnly by remember { mutableStateOf(prefs.isParcelEnabled) }
 
     val tabs = listOf("Home", "Earnings", "Orders", "Profile")
-    val tripLogs = prefs.getAcceptedTrips()
+        val tripLogs = prefs.getAcceptedTrips()
+    val totalEarnings = tripLogs.mapNotNull { 
+        it.fare.replace("[^0-9]".toRegex(), "").toIntOrNull() 
+    }.sum()
 
     Scaffold(
         containerColor = Color(0xFF070B11),
@@ -114,7 +117,7 @@ fun ModernDashboardView(
                     ) {
                         Column {
                             Text("TODAY'S EARNINGS", color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            Text("₹1,245", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                            Text("₹" + totalEarnings.toString(), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
                         }
                     }
                     Box(
