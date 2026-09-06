@@ -41,9 +41,7 @@ fun ModernDashboardView(
     val totalEarnings = tripLogs.mapNotNull { 
         it.fare.replace("[^0-9]".toRegex(), "").toIntOrNull() 
     }.sum()
-    val totalEarnings = tripLogs.mapNotNull { 
-        it.fare.replace("[^0-9]".toRegex(), "").toIntOrNull() 
-    }.sum()
+    
 
     Scaffold(
         containerColor = Color(0xFF070B11),
