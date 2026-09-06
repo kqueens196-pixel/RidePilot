@@ -50,4 +50,24 @@ class PreferencesManager(context: Context) {
     fun addTripLog(provider: String, fare: String, pickup: String, drop: String) {
         addTripLog(AcceptedTrip(provider, fare, pickup, drop))
     }
+
+    var isGoHomeEnabled: Boolean
+        get() = prefs.getBoolean("go_home_enabled", false)
+        set(value) = prefs.edit().putBoolean("go_home_enabled", value).apply()
+
+    var destinationAddress: String
+        get() = prefs.getString("dest_address", "") ?: ""
+        set(value) = prefs.edit().putString("dest_address", value).apply()
+
+    fun clearSession() {
+        prefs.edit().clear().apply()
+    }
+
+    fun addAcceptedTrip(provider: String, fare: String, pickup: String, drop: String) {
+        addTripLog(provider, fare, pickup, drop)
+    }
+
+    fun addAcceptedTrip(trip: AcceptedTrip) {
+        addTripLog(trip)
+    }
 }
