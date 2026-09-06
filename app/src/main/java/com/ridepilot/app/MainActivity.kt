@@ -100,7 +100,7 @@ fun RidePilotMasterRoot(prefs: PreferencesManager, subManager: SubscriptionManag
             }
         )
     } else {
-        PremiumDashboardView(
+        ModernDashboardView(
             prefs = prefs,
             subManager = subManager,
             phone = loggedInPhone,
@@ -290,7 +290,7 @@ fun PremiumAuthView(onLoginSuccess: (String, Boolean) -> Unit) {
 }
 
 @Composable
-fun PremiumDashboardView(
+fun ModernDashboardView(
     prefs: PreferencesManager,
     subManager: SubscriptionManager,
     phone: String,
