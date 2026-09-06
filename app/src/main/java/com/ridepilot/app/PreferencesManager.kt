@@ -90,4 +90,8 @@ class PreferencesManager(context: Context) {
         val raw = trips.take(50).joinToString(";;") { "${it.provider}|${it.fare}|${it.pickup}|${it.drop}" }
         prefs.edit().putString("accepted_trips_log", raw).apply()
     }
+
+    fun addTripLog(trip: AcceptedTrip) {
+        addTripLog(trip.provider, trip.fare, trip.pickup, trip.drop)
+    }
 }
