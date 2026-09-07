@@ -70,4 +70,9 @@ class PreferencesManager(context: Context) {
     fun addAcceptedTrip(trip: AcceptedTrip) {
         addTripLog(trip)
     }
+
+    var riderPhone: String
+        get() = prefs.getString("rider_phone", "9876543210") ?: "9876543210"
+        set(value) = prefs.edit().putString("rider_phone", value).apply()
+
 }
