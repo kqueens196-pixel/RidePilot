@@ -18,7 +18,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ModernDashboard(prefs)
+                    ModernDashboard(
+                        prefs = prefs,
+                        phone = prefs.riderPhone,
+                        onLogout = { prefs.clearSession() }
+                    )
                 }
             }
         }
