@@ -4,6 +4,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 package com.ridepilot.app
 
+data class AcceptedTrip(
+    val provider: String = "Ola",
+    val fare: String = "₹120",
+    val pickup: String = "Current Location",
+    val drop: String = "Drop Location",
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+
 import android.widget.Toast
 import com.ridepilot.app.PreferencesManager
 import com.ridepilot.app.AdminActivity
