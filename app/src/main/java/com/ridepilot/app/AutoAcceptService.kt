@@ -22,7 +22,7 @@ class AutoAcceptService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || !prefs.autoAccept) return
+        if (event == null || !prefs.autoAccept || !prefs.isPremiumActive()) return
 
         val pkgName = event.packageName?.toString() ?: ""
         val targetApps = listOf("rapido", "olacabs", "uber", "porter")
@@ -59,6 +59,12 @@ class AutoAcceptService : AccessibilityService() {
         }
 
         val acceptKeywords = listOf("ACCEPT", "Accept", "ACCEPT ORDER", "SWIPE TO ACCEPT", "Accept Ride")
+        // Anti-Detection: Natural human tap delay simulation (140ms - 320ms)
+        try {
+            val humanDelay = (140..320).random().toLong()
+            Thread.sleep(humanDelay)
+        } catch (_: Exception) {}
+
         val clicked = findAndClick(root, acceptKeywords)
 
         if (clicked) {
