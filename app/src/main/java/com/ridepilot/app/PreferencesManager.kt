@@ -104,4 +104,39 @@ class PreferencesManager(context: Context) {
         val remaining = (48 * 60 * 60 * 1000L) - elapsed
         return if (remaining > 0) (remaining / (1000 * 60 * 60)).toInt() else 0
     }
+
+    var isBlocked: Boolean
+        get() = prefs.getBoolean("is_blocked", false)
+        set(value) = prefs.edit().putBoolean("is_blocked", value).apply()
+
+    fun syncWithCloud(phone: String) {
+        if (phone.isBlank()) return
+        try {
+            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            val userRef = db.collection("users").document(phone)
+            
+            userRef.get().addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    val remoteBlocked = doc.getBoolean("isBlocked") ?: false
+                    val remoteExpiry = doc.getLong("expiry") ?: 0L
+                    this.isBlocked = remoteBlocked
+                    if (remoteExpiry > 0L) {
+                        this.subscriptionExpiry = remoteExpiry
+                    }
+                } else {
+                    // First time registration
+                    val trialEnd = System.currentTimeMillis() + (48 * 60 * 60 * 1000L)
+                    val data = mapOf(
+                        "phone" to phone,
+                        "status" to "Trial",
+                        "registeredAt" to System.currentTimeMillis(),
+                        "expiry" to trialEnd,
+                        "isBlocked" to false
+                    )
+                    userRef.set(data)
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
 }

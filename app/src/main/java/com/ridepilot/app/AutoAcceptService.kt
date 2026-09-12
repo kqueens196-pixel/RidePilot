@@ -22,7 +22,7 @@ class AutoAcceptService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || !prefs.autoAccept || !prefs.isPremiumActive()) return
+        if (event == null || !prefs.autoAccept || !prefs.isPremiumActive() || prefs.isBlocked) return
 
         val pkgName = event.packageName?.toString() ?: ""
         val targetApps = listOf("rapido", "olacabs", "uber", "porter")
