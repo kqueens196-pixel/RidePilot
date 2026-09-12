@@ -3,495 +3,385 @@ package com.ridepilot.app
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ridepilot.app.AcceptedTrip
-import com.ridepilot.app.AdminActivity
 import com.ridepilot.app.PreferencesManager
+import com.ridepilot.app.AdminActivity
 
-
-
-
-
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModernDashboard(
     prefs: PreferencesManager,
-    phone: String = "9876543210",
     onLogout: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(0) }
-    var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
-    var maxKm by remember { mutableStateOf(prefs.maxPickupKm) }
-    var isParcel by remember { mutableStateOf(prefs.isParcelEnabled) }
-    var isRide by remember { mutableStateOf(prefs.isRideEnabled) }
-    var trips by remember { mutableStateOf(prefs.getAcceptedTrips()) }
 
     Scaffold(
+        containerColor = Color(0xFF0D1117),
         bottomBar = {
-            NavigationBar(containerColor = Color(0xFF0D1117)) {
-                val items = listOf(
-                    Triple("Home", Icons.Default.Home, 0),
-                    Triple("Earnings", Icons.Default.Star, 1),
-                    Triple("Orders", Icons.Default.CheckCircle, 2),
-                    Triple("Profile", Icons.Default.Person, 3)
+            NavigationBar(
+                containerColor = Color(0xFF161B22),
+                contentColor = Color.White
+            ) {
+                NavigationBarItem(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                    label = { Text("Home") }
                 )
-                items.forEach { (label, icon, index) ->
-                    NavigationBarItem(
-                        selected = selectedTab == index,
-                        onClick = {
-                            selectedTab = index
-                            if (index == 1 || index == 2) {
-                                trips = prefs.getAcceptedTrips()
-                            }
-                        },
-                        icon = { Icon(icon, contentDescription = label) },
-                        label = { Text(label, fontSize = 11.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFF00E676),
-                            selectedTextColor = Color(0xFF00E676),
-                            unselectedIconColor = Color(0xFF8B949E),
-                            unselectedTextColor = Color(0xFF8B949E),
-                            indicatorColor = Color(0xFF161B22)
-                        )
-                    )
-                }
+                NavigationBarItem(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    icon = { Icon(Icons.Default.Star, contentDescription = "Earnings") },
+                    label = { Text("Earnings") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    icon = { Icon(Icons.Default.CheckCircle, contentDescription = "Orders") },
+                    label = { Text("Orders") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    label = { Text("Profile") }
+                )
             }
-        },
-        containerColor = Color(0xFF090D12)
-    ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             when (selectedTab) {
-                0 -> HomeScreen(
-                    context = context,
-                    autoAccept = autoAccept,
-                    onAutoAcceptChange = {
-                        autoAccept = it
-                        prefs.autoAccept = it
-                    },
-                    maxKm = maxKm,
-                    onMaxKmChange = {
-                        maxKm = it
-                        prefs.maxPickupKm = it
-                    },
-                    isParcel = isParcel,
-                    onParcelChange = {
-                        isParcel = it
-                        prefs.isParcelEnabled = it
-                    },
-                    isRide = isRide,
-                    onRideChange = {
-                        isRide = it
-                        prefs.isRideEnabled = it
-                    }
-                )
-                1 -> EarningsScreen(trips = trips)
-                2 -> OrdersScreen(trips = trips)
-                3 -> ProfileScreen(
-                    context = context,
-                    prefs = prefs,
-                    phone = phone,
-                    onLogout = onLogout
-                )
+                0 -> HomeScreen(prefs = prefs)
+                1 -> EarningsScreen()
+                2 -> OrdersScreen()
+                3 -> ProfileScreen(prefs = prefs, onLogout = onLogout)
             }
         }
     }
 }
 
 @Composable
-fun HomeScreen(
-    context: Context,
-    autoAccept: Boolean,
-    onAutoAcceptChange: (Boolean) -> Unit,
-    maxKm: Float,
-    onMaxKmChange: (Float) -> Unit,
-    isParcel: Boolean,
-    onParcelChange: (Boolean) -> Unit,
-    isRide: Boolean,
-    onRideChange: (Boolean) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+fun HomeScreen(prefs: PreferencesManager) {
+    val context = LocalContext.current
+    var autoAccept by remember { mutableStateOf(prefs.autoAccept) }
+    var floatingBubble by remember { mutableStateOf(prefs.floatingBubble) }
+    var pickupDist by remember { mutableStateOf(prefs.maxPickupDistance) }
+    var dropDist by remember { mutableStateOf(prefs.maxDropDistance) }
+    var bikeMode by remember { mutableStateOf(prefs.bikeMode) }
+    var parcelMode by remember { mutableStateOf(prefs.parcelMode) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("RidePilot Auto-Accept", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Ola • Rapido • Uber • Porter", fontSize = 12.sp, color = Color.Gray)
+            }
+            Surface(
+                color = if (autoAccept) Color(0xFF00E676).copy(alpha = 0.2f) else Color(0xFFFF5252).copy(alpha = 0.2f),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = if (autoAccept) "ONLINE" else "OFFLINE",
+                    color = if (autoAccept) Color(0xFF00E676) else Color(0xFFFF5252),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        // Master Switch Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text("RidePilot Auto-Accept", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                    Text("Ola • Rapido • Uber • Porter", color = Color(0xFF00E676), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Master Auto-Accept", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Auto swipe/click orders instantly", fontSize = 12.sp, color = Color.Gray)
                 }
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (autoAccept) Color(0xFF00E676) else Color(0xFFFF5252))
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Text(if (autoAccept) "ACTIVE" else "OFFLINE", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
+                Switch(
+                    checked = autoAccept,
+                    onCheckedChange = {
+                        autoAccept = it
+                        prefs.autoAccept = it
+                    }
+                )
             }
         }
 
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                modifier = Modifier.fillMaxWidth()
+        // Floating Bubble Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Floating Drive Bubble", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Show widget over Ola / Rapido screen", fontSize = 12.sp, color = Color.Gray)
+                }
+                Switch(
+                    checked = floatingBubble,
+                    onCheckedChange = {
+                        floatingBubble = it
+                        prefs.floatingBubble = it
+                    }
+                )
+            }
+        }
+
+        // Distance Filters Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Pickup Filter (200m - 500m)
                 Row(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Master Auto-Accept", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Text("Auto swipe/click orders instantly", color = Color(0xFF8B949E), fontSize = 12.sp)
+                    Column {
+                        Text("Max Pickup Distance", fontWeight = FontWeight.SemiBold, color = Color.White)
+                        Text("Nearest rider limit (200m - 500m)", fontSize = 11.sp, color = Color.Gray)
                     }
-                    Switch(
-                        checked = autoAccept,
-                        onCheckedChange = onAutoAcceptChange,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color(0xFF00E676),
-                            checkedTrackColor = Color(0xFF0B3818)
-                        )
+                    Text(
+                        text = "${(pickupDist * 1000).toInt()} M",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF00E676)
                     )
                 }
-            }
-        }
-
-        item {
-            var bubbleActive by remember { mutableStateOf(false) }
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Floating Drive Bubble", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Text("Show widget over Ola / Rapido screen", color = Color(0xFF8B949E), fontSize = 12.sp)
-                    }
-                    Switch(
-                        checked = bubbleActive,
-                        onCheckedChange = { active ->
-                            if (active) {
-                                if (Settings.canDrawOverlays(context)) {
-                                    context.startService(Intent(context, FloatingBubbleService::class.java))
-                                    bubbleActive = true
-                                } else {
-                                    val intent = Intent(
-                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                        Uri.parse("package:" + context.packageName)
-                                    )
-                                    context.startActivity(intent)
-                                }
-                            } else {
-                                context.stopService(Intent(context, FloatingBubbleService::class.java))
-                                bubbleActive = false
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color(0xFF00E676),
-                            checkedTrackColor = Color(0xFF0B3818)
-                        )
-                    )
-                }
-            }
-        }
-
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Max Pickup Distance", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Text("${String.format("%.1f", maxKm)} KM", color = Color(0xFF00E676), fontWeight = FontWeight.Bold)
-                    }
-                    Slider(
-                    value = pickupDistance,
-                    onValueChange = { 
-                        pickupDistance = it
+                Slider(
+                    value = pickupDist,
+                    onValueChange = {
+                        pickupDist = it
                         prefs.maxPickupDistance = it
                     },
-                    valueRange = 0.2f..10.0f,
-                    steps = 48,
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFF00E676),
-                        activeTrackColor = Color(0xFF00E676),
-                        inactiveTrackColor = Color(0xFF21262D)
+                    valueRange = 0.2f..0.5f,
+                    steps = 2
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = Color(0xFF21262D))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Drop Distance Filter (2km - 25km)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Max Drop / Trip Distance", fontWeight = FontWeight.SemiBold, color = Color.White)
+                        Text("Trip destination limit", fontSize = 11.sp, color = Color.Gray)
+                    }
+                    Text(
+                        text = "${dropDist.toInt()} KM",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF00E676)
                     )
-                ),
-                            activeTrackColor = Color(0xFF00E676)
-                        )
+                }
+                Slider(
+                    value = dropDist,
+                    onValueChange = {
+                        dropDist = it
+                        prefs.maxDropDistance = it
+                    },
+                    valueRange = 2.0f..25.0f,
+                    steps = 22
+                )
+            }
+        }
+
+        // Vehicle Modes
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Target Vehicle Modes", fontWeight = FontWeight.SemiBold, color = Color.White)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Bike Ride Mode", color = Color.White)
+                    Checkbox(
+                        checked = bikeMode,
+                        onCheckedChange = {
+                            bikeMode = it
+                            prefs.bikeMode = it
+                        }
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Parcel / Delivery Mode", color = Color.White)
+                    Checkbox(
+                        checked = parcelMode,
+                        onCheckedChange = {
+                            parcelMode = it
+                            prefs.parcelMode = it
+                        }
                     )
                 }
             }
         }
 
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Target Vehicle Modes", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Bike Ride Mode", color = Color.White, fontSize = 13.sp)
-                        Checkbox(checked = isRide, onCheckedChange = onRideChange)
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Parcel / Delivery Mode", color = Color.White, fontSize = 13.sp)
-                        Checkbox(checked = isParcel, onCheckedChange = onParcelChange)
-                    }
-                }
-            }
-        }
-
-        item {
-            Button(
-                onClick = {
-                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    context.startActivity(intent)
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF238636)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Enable Accessibility Service", color = Color.White, fontWeight = FontWeight.Bold)
-            }
+        Button(
+            onClick = {
+                val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E7E34)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Enable Accessibility Service", fontWeight = FontWeight.Bold, color = Color.White)
         }
     }
 }
 
 @Composable
-fun EarningsScreen(trips: List<AcceptedTrip>) {
-    val totalEarnings = trips.sumOf { trip ->
-        trip.fare.replace("₹", "").trim().toIntOrNull() ?: 0
-    }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+fun EarningsScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        item {
-            Text("Earnings Overview", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
-        }
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text("Total Captured Revenue", color = Color(0xFF8B949E), fontSize = 13.sp)
-                    Text("₹$totalEarnings", color = Color(0xFF00E676), fontSize = 32.sp, fontWeight = FontWeight.Black)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("${trips.size} Total Auto-Accepted Rides", color = Color.White, fontSize = 12.sp)
-                }
-            }
-        }
-        item {
-            Text("Recent Earnings Breakdown", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
-        if (trips.isEmpty()) {
-            item {
-                Text("No rides accepted yet. Turn on Auto-Accept!", color = Color(0xFF8B949E), fontSize = 13.sp)
-            }
-        } else {
-            items(trips) { trip ->
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp).fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(trip.provider, color = Color.White, fontWeight = FontWeight.Bold)
-                            Text(trip.pickup, color = Color(0xFF8B949E), fontSize = 11.sp)
-                        }
-                        Text(trip.fare, color = Color(0xFF00E676), fontWeight = FontWeight.Black, fontSize = 16.sp)
-                    }
-                }
-            }
-        }
+        Text("Today's Earnings", fontSize = 16.sp, color = Color.Gray)
+        Text("₹0.00", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00E676))
     }
 }
 
 @Composable
-fun OrdersScreen(trips: List<AcceptedTrip>) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+fun OrdersScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        item {
-            Text("Order History", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
-        }
-        if (trips.isEmpty()) {
-            item {
-                Box(modifier = Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
-                    Text("No orders logged yet", color = Color(0xFF8B949E))
-                }
-            }
-        } else {
-            items(trips) { trip ->
-                Card(
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(trip.provider, color = Color(0xFF00E676), fontWeight = FontWeight.Bold)
-                            Text(trip.fare, color = Color.White, fontWeight = FontWeight.Black)
-                        }
-                        Text(trip.pickup, color = Color.White, fontSize = 12.sp)
-                        Text(trip.drop, color = Color(0xFF8B949E), fontSize = 11.sp)
-                    }
-                }
-            }
-        }
+        Text("No Trips Accepted Today", color = Color.Gray)
     }
-}
-
-fun openUpiPayment(context: Context, amount: String, planName: String) {
-    try {
-        val uri = Uri.Builder()
-            .scheme("upi")
-            .authority("pay")
-            .appendQueryParameter("pa", "9347808890-n7bc@ibl") // Standard UPI VPA format
-            .appendQueryParameter("pn", "RidePilot Sub")
-            .appendQueryParameter("tn", "RidePilot " + planName + " Access")
-            .appendQueryParameter("am", amount)
-            .appendQueryParameter("cu", "INR")
-            .build()
-        val intent = Intent(Intent.ACTION_VIEW, uri)
-        val chooser = Intent.createChooser(intent, "Select UPI App")
-        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(chooser)
-    } catch (_: Exception) {}
 }
 
 @Composable
 fun ProfileScreen(
-    context: Context,
     prefs: PreferencesManager,
-    phone: String,
     onLogout: () -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+    val context = LocalContext.current
+    var secretClickCount by remember { mutableStateOf(0) }
+    var showPinDialog by remember { mutableStateOf(false) }
+    var adminPin by remember { mutableStateOf("") }
+
+    if (showPinDialog) {
+        AlertDialog(
+            onDismissRequest = { showPinDialog = false },
+            title = { Text("Master Admin Access", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Enter Master Security PIN:", color = Color.Gray, fontSize = 13.sp)
+                    OutlinedTextField(
+                        value = adminPin,
+                        onValueChange = { adminPin = it },
+                        placeholder = { Text("PIN") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (adminPin == "7860") {
+                            showPinDialog = false
+                            adminPin = ""
+                            val intent = Intent(context, AdminActivity::class.java)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                        } else {
+                            Toast.makeText(context, "Invalid Master PIN", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
+                ) {
+                    Text("Login", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPinDialog = false }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF161B22)
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            
-        var secretClickCount by remember { mutableStateOf(0) }
-        var showPinDialog by remember { mutableStateOf(false) }
-        var adminPin by remember { mutableStateOf("") }
-
-        if (showPinDialog) {
-            AlertDialog(
-                onDismissRequest = { showPinDialog = false },
-                title = { Text("Master Admin Access", color = Color.White, fontWeight = FontWeight.Bold) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Enter Master Security PIN:", color = Color.Gray, fontSize = 13.sp)
-                        OutlinedTextField(
-                            value = adminPin,
-                            onValueChange = { adminPin = it },
-                            placeholder = { Text("PIN") },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            )
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (adminPin == "7860") {
-                                showPinDialog = false
-                                adminPin = ""
-                                val intent = Intent(context, AdminActivity::class.java)
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            } else {
-                                Toast.makeText(context, "Invalid Master PIN", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
-                    ) {
-                        Text("Login", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showPinDialog = false }) {
-                        Text("Cancel", color = Color.Gray)
-                    }
-                },
-                containerColor = Color(0xFF161B22)
-            )
-        }
-
         Text(
             "Account & Settings",
             fontSize = 20.sp,
@@ -505,90 +395,93 @@ fun ProfileScreen(
                 }
             }
         )
-        }
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Pilot Member", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text("+91 $phone", color = Color(0xFF8B949E), fontSize = 13.sp)
-                    val statusText = if (prefs.isPremiumActive()) "Status: Active Member" else "Status: Plan Expired"
-                    Text(statusText, color = Color(0xFF00E676), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Pilot Member", fontWeight = FontWeight.Bold, color = Color.White)
+                Text(prefs.userPhone.ifEmpty { "+91 9876543210" }, color = Color.Gray)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text("Status: " + if (prefs.isSubscriptionActive) "Active Member" else "Trial / Expired", color = Color.White)
             }
         }
 
-        item {
-            Text("Subscription Plans", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("Subscription Plans", fontWeight = FontWeight.Bold, color = Color.White)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PlanCard(modifier = Modifier.weight(1f), title = "Weekly", price = "₹49", duration = "7 Days") {
+                openUPI(context, "49", "Weekly Plan")
+            }
+            PlanCard(modifier = Modifier.weight(1f), title = "Monthly", price = "₹149", duration = "Best Value", isPopular = true) {
+                openUPI(context, "149", "Monthly Plan")
+            }
+            PlanCard(modifier = Modifier.weight(1f), title = "VIP Pass", price = "₹349", duration = "90 Days") {
+                openUPI(context, "349", "VIP Pass Plan")
+            }
         }
 
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Weekly Plan
-                Card(
-                    modifier = Modifier.weight(1f).clickable { openUpiPayment(context, "49", "Weekly") },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22))
-                ) {
-                    Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Weekly", color = Color(0xFF8B949E), fontSize = 12.sp)
-                        Text("₹49", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("7 Days", color = Color(0xFF00E676), fontSize = 10.sp)
-                    }
-                }
-                // Monthly Plan
-                Card(
-                    modifier = Modifier.weight(1f).clickable { openUpiPayment(context, "149", "Monthly") },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0D3B22))
-                ) {
-                    Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Monthly", color = Color(0xFF00E676), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("₹149", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Best Value", color = Color(0xFF00E676), fontSize = 10.sp)
-                    }
-                }
-                // Quarterly VIP Plan
-                Card(
-                    modifier = Modifier.weight(1f).clickable { openUpiPayment(context, "349", "VIP") },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22))
-                ) {
-                    Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("VIP Pass", color = Color(0xFF8B949E), fontSize = 12.sp)
-                        Text("₹349", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("90 Days", color = Color(0xFF00E676), fontSize = 10.sp)
-                    }
-                }
-            }
+        Button(
+            onClick = {
+                val intent = Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                intent.data = Uri.parse("package:" + context.packageName)
+                context.startActivity(intent)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("App Permissions & Overlay", fontWeight = FontWeight.Bold, color = Color.White)
         }
-        item {
-            Button(
-                onClick = {
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", context.packageName, null)
-                    }
-                    context.startActivity(intent)
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F6FEB)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("App Permissions & Overlay", color = Color.White, fontWeight = FontWeight.Bold)
-            }
+
+        OutlinedButton(
+            onClick = {
+                prefs.logout()
+                onLogout()
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("Reset Session / Logout", color = Color.White)
         }
-        item {
-            OutlinedButton(
-                onClick = onLogout,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Reset Session / Logout")
-            }
+    }
+}
+
+@Composable
+fun PlanCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    price: String,
+    duration: String,
+    isPopular: Boolean = false,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isPopular) Color(0xFF0F3821) else Color(0xFF161B22)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(title, fontSize = 11.sp, color = Color.Gray)
+            Text(price, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(duration, fontSize = 10.sp, color = Color.Gray)
         }
+    }
+}
+
+fun openUPI(context: Context, amount: String, note: String) {
+    val upiUri = Uri.parse("upi://pay?pa=9347808890-n7bc@ibl&pn=RidePilot&am=$amount&cu=INR&tn=$note")
+    val intent = Intent(Intent.ACTION_VIEW, upiUri)
+    try {
+        context.startActivity(Intent.createChooser(intent, "Pay with UPI"))
+    } catch (_: Exception) {
+        Toast.makeText(context, "No UPI app found", Toast.LENGTH_SHORT).show()
     }
 }
