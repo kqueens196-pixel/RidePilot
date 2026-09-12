@@ -1,3 +1,7 @@
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 package com.ridepilot.app
 
 import android.content.Context
@@ -416,7 +420,70 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Text("Account & Settings", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            
+        var secretClickCount by remember { mutableStateOf(0) }
+        var showPinDialog by remember { mutableStateOf(false) }
+        var adminPin by remember { mutableStateOf("") }
+
+        if (showPinDialog) {
+            AlertDialog(
+                onDismissRequest = { showPinDialog = false },
+                title = { Text("Master Admin Access", color = Color.White, fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Enter Master Security PIN:", color = Color.Gray, fontSize = 13.sp)
+                        OutlinedTextField(
+                            value = adminPin,
+                            onValueChange = { adminPin = it },
+                            placeholder = { Text("PIN") },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (adminPin == "7860") {
+                                showPinDialog = false
+                                adminPin = ""
+                                val intent = Intent(context, AdminActivity::class.java)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            } else {
+                                Toast.makeText(context, "Invalid Master PIN", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676))
+                    ) {
+                        Text("Login", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPinDialog = false }) {
+                        Text("Cancel", color = Color.Gray)
+                    }
+                },
+                containerColor = Color(0xFF161B22)
+            )
+        }
+
+        Text(
+            "Account & Settings",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            modifier = Modifier.clickable {
+                secretClickCount++
+                if (secretClickCount >= 5) {
+                    secretClickCount = 0
+                    showPinDialog = true
+                }
+            }
+        )
         }
         item {
             Card(
