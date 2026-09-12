@@ -23,6 +23,7 @@ class AutoAcceptService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!isWithinDistance(rootInActiveWindow ?: return)) return
+        if (!isRideAllowed(rootInActiveWindow)) return
         if (event == null || !prefs.autoAccept || !prefs.isPremiumActive() || prefs.isBlocked) return
 
         val pkgName = event.packageName?.toString() ?: ""
@@ -171,6 +172,53 @@ class AutoAcceptService : AccessibilityService() {
                     val inKm = meters / 1000f
                     if (inKm > maxKm) return false
                 }
+            }
+        } catch (_: Exception) {}
+        return true
+    }
+
+
+    private fun isRideAllowed(rootNode: android.view.accessibility.AccessibilityNodeInfo?): Boolean {
+        if (rootNode == null) return false
+        try {
+            val texts = mutableListOf<String>()
+            fun collect(node: android.view.accessibility.AccessibilityNodeInfo?) {
+                if (node == null) return
+                node.text?.let { if (it.isNotBlank()) texts.add(it.toString()) }
+                for (i in 0 until node.childCount) {
+                    collect(node.getChild(i))
+                }
+            }
+            collect(rootNode)
+
+            val maxPickup = prefs.maxPickupDistance
+            val maxDrop = prefs.maxDropDistance
+
+            val kmRegex = Regex("([0-9]+(?:\.[0-9]+)?)\\s*(?:km|kms)", RegexOption.IGNORE_CASE)
+            val mRegex = Regex("([0-9]+)\\s*(?:m|mtr|meter|meters)", RegexOption.IGNORE_CASE)
+
+            val detectedDistances = mutableListOf<Float>()
+
+            for (t in texts) {
+                kmRegex.findAll(t).forEach {
+                    it.groupValues[1].toFloatOrNull()?.let { km -> detectedDistances.add(km) }
+                }
+                mRegex.findAll(t).forEach {
+                    it.groupValues[1].toFloatOrNull()?.let { m -> detectedDistances.add(m / 1000f) }
+                }
+            }
+
+            // If 2 distances appear (usually [Pickup, Drop]):
+            // Smaller one is pickup, larger one is drop
+            if (detectedDistances.size >= 2) {
+                val sorted = detectedDistances.sorted()
+                val pickup = sorted.first()
+                val drop = sorted.last()
+                if (pickup > maxPickup) return false
+                if (drop > maxDrop) return false
+            } else if (detectedDistances.size == 1) {
+                // If only one distance is visible, treat as drop/trip limit
+                if (detectedDistances[0] > maxDrop) return false
             }
         } catch (_: Exception) {}
         return true
