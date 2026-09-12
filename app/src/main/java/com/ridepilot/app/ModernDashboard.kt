@@ -174,6 +174,50 @@ fun HomeScreen(
         }
 
         item {
+            var bubbleActive by remember { mutableStateOf(false) }
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Floating Drive Bubble", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("Show widget over Ola / Rapido screen", color = Color(0xFF8B949E), fontSize = 12.sp)
+                    }
+                    Switch(
+                        checked = bubbleActive,
+                        onCheckedChange = { active ->
+                            if (active) {
+                                if (Settings.canDrawOverlays(context)) {
+                                    context.startService(Intent(context, FloatingBubbleService::class.java))
+                                    bubbleActive = true
+                                } else {
+                                    val intent = Intent(
+                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:" + context.packageName)
+                                    )
+                                    context.startActivity(intent)
+                                }
+                            } else {
+                                context.stopService(Intent(context, FloatingBubbleService::class.java))
+                                bubbleActive = false
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color(0xFF00E676),
+                            checkedTrackColor = Color(0xFF0B3818)
+                        )
+                    )
+                }
+            }
+        }
+
+        item {
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
