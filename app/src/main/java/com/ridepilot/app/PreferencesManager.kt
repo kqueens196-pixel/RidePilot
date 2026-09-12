@@ -139,4 +139,9 @@ class PreferencesManager(context: Context) {
         } catch (_: Exception) {}
     }
 
+
+    fun logout() {
+        prefs.edit().putBoolean("is_logged_in", false).putString("user_phone", "").apply()
+    }
+
 }
