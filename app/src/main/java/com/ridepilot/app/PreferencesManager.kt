@@ -150,9 +150,6 @@ class PreferencesManager(context: Context) {
         set(value) = prefs.edit().putFloat("max_pickup_distance", value).apply()
 
 
-    var maxPickupDistance: Float
-        get() = prefs.getFloat("max_pickup_distance", 0.3f)
-        set(value) = prefs.edit().putFloat("max_pickup_distance", value).apply()
 
     var maxDropDistance: Float
         get() = prefs.getFloat("max_drop_distance", 10.0f)
