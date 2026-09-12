@@ -385,6 +385,14 @@ fun OrdersScreen(trips: List<AcceptedTrip>) {
     }
 }
 
+fun openUpiPayment(context: Context, amount: String, planName: String) {
+    try {
+        val uri = Uri.parse("upi://pay?pa=ridepilot@upi&pn=RidePilot&tn=Subscription_" + planName + "&am=" + amount + "&cu=INR")
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        context.startActivity(Intent.createChooser(intent, "Pay with UPI"))
+    } catch (_: Exception) {}
+}
+
 @Composable
 fun ProfileScreen(
     context: Context,
@@ -404,9 +412,56 @@ fun ProfileScreen(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Pilot Member", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text("+91 $phone • VIP Lifetime Active", color = Color(0xFF00E676), fontSize = 12.sp)
+                    Text("+91 $phone", color = Color(0xFF8B949E), fontSize = 13.sp)
+                    val statusText = if (prefs.isPremiumActive()) "Status: Active Member" else "Status: Plan Expired"
+                    Text(statusText, color = Color(0xFF00E676), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+
+        item {
+            Text("Subscription Plans", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Weekly Plan
+                Card(
+                    modifier = Modifier.weight(1f).clickable { openUpiPayment(context, "49", "Weekly") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Weekly", color = Color(0xFF8B949E), fontSize = 12.sp)
+                        Text("₹49", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("7 Days", color = Color(0xFF00E676), fontSize = 10.sp)
+                    }
+                }
+                // Monthly Plan
+                Card(
+                    modifier = Modifier.weight(1f).clickable { openUpiPayment(context, "149", "Monthly") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0D3B22))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Monthly", color = Color(0xFF00E676), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("₹149", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Best Value", color = Color(0xFF00E676), fontSize = 10.sp)
+                    }
+                }
+                // Quarterly VIP Plan
+                Card(
+                    modifier = Modifier.weight(1f).clickable { openUpiPayment(context, "349", "VIP") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22))
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("VIP Pass", color = Color(0xFF8B949E), fontSize = 12.sp)
+                        Text("₹349", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("90 Days", color = Color(0xFF00E676), fontSize = 10.sp)
+                    }
                 }
             }
         }

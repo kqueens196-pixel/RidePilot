@@ -75,4 +75,33 @@ class PreferencesManager(context: Context) {
         get() = prefs.getString("rider_phone", "9876543210") ?: "9876543210"
         set(value) = prefs.edit().putString("rider_phone", value).apply()
 
+
+    // Subscription & Free Trial Management
+    var firstLaunchTime: Long
+        get() {
+            var time = prefs.getLong("first_launch_time", 0L)
+            if (time == 0L) {
+                time = System.currentTimeMillis()
+                prefs.edit().putLong("first_launch_time", time).apply()
+            }
+            return time
+        }
+        set(value) = prefs.edit().putLong("first_launch_time", value).apply()
+
+    var subscriptionExpiry: Long
+        get() = prefs.getLong("subscription_expiry", 0L)
+        set(value) = prefs.edit().putLong("subscription_expiry", value).apply()
+
+    fun isPremiumActive(): Boolean {
+        val now = System.currentTimeMillis()
+        val trialActive = (now - firstLaunchTime) < (48 * 60 * 60 * 1000L) // 48 Hours Trial
+        val planActive = subscriptionExpiry > now
+        return trialActive || planActive
+    }
+
+    fun getRemainingTrialHours(): Int {
+        val elapsed = System.currentTimeMillis() - firstLaunchTime
+        val remaining = (48 * 60 * 60 * 1000L) - elapsed
+        return if (remaining > 0) (remaining / (1000 * 60 * 60)).toInt() else 0
+    }
 }
