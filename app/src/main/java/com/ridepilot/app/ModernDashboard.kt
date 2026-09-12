@@ -391,7 +391,7 @@ fun openUpiPayment(context: Context, amount: String, planName: String) {
         val uri = Uri.Builder()
             .scheme("upi")
             .authority("pay")
-            .appendQueryParameter("pa", "bharatpe.9020087455@fbpe") // Standard UPI VPA format
+            .appendQueryParameter("pa", "9347808890-n7bc@ibl") // Standard UPI VPA format
             .appendQueryParameter("pn", "RidePilot Sub")
             .appendQueryParameter("tn", "RidePilot " + planName + " Access")
             .appendQueryParameter("am", amount)
