@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "483700959422",
+    "project_id": "ridepilot-33059",
+    "storage_bucket": "ridepilot-33059.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:483700959422:android:6bf196363deb5ce37dd6ef",
+        "android_client_info": {
+          "package_name": "com.ridepilot.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCCqwvmKNwN-TZAN5jBh-R1S8i64CDbCk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

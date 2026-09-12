@@ -59,6 +59,7 @@
             </intent-filter>
         </activity>
             <service android:name=".FloatingBubbleService" android:enabled="true" android:exported="false" />
+            <activity android:name=".AdminActivity" android:exported="true" />
     </application>
 
 </manifest>
