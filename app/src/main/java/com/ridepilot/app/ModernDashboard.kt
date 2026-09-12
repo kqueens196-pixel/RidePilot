@@ -101,6 +101,7 @@ fun ModernDashboard(
                 2 -> OrdersScreen(trips = trips)
                 3 -> ProfileScreen(
                     context = context,
+                    prefs = prefs,
                     phone = phone,
                     onLogout = onLogout
                 )
@@ -396,6 +397,7 @@ fun openUpiPayment(context: Context, amount: String, planName: String) {
 @Composable
 fun ProfileScreen(
     context: Context,
+    prefs: PreferencesManager,
     phone: String,
     onLogout: () -> Unit
 ) {
