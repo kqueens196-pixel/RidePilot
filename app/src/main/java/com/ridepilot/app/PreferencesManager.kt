@@ -155,4 +155,24 @@ class PreferencesManager(context: Context) {
         get() = prefs.getFloat("max_drop_distance", 10.0f)
         set(value) = prefs.edit().putFloat("max_drop_distance", value).apply()
 
+
+var bikeMode: Boolean
+        get() = prefs.getBoolean("bike_mode", true)
+        set(value) = prefs.edit().putBoolean("bike_mode", value).apply()
+
+    var parcelMode: Boolean
+        get() = prefs.getBoolean("parcel_mode", true)
+        set(value) = prefs.edit().putBoolean("parcel_mode", value).apply()
+
+    var floatingBubble: Boolean
+        get() = prefs.getBoolean("floating_bubble", false)
+        set(value) = prefs.edit().putBoolean("floating_bubble", value).apply()
+
+    var userPhone: String
+        get() = prefs.getString("user_phone", "") ?: ""
+        set(value) = prefs.edit().putString("user_phone", value).apply()
+
+    var isSubscriptionActive: Boolean
+        get() = prefs.getBoolean("is_subscription_active", true)
+        set(value) = prefs.edit().putBoolean("is_subscription_active", value).apply()
 }
