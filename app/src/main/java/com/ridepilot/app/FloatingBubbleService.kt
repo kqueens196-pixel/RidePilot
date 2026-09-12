@@ -17,7 +17,7 @@ import android.widget.TextView
 class FloatingBubbleService : Service() {
 
     private var windowManager: WindowManager? = null
-    private var bubbleView: View? = null
+    private var bubbleView: TextView? = null
     private lateinit var prefs: PreferencesManager
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -29,20 +29,30 @@ class FloatingBubbleService : Service() {
         createFloatingBubble()
     }
 
-    private fun createFloatingBubble() {
-        val textView = TextView(this).apply {
-            text = if (prefs.autoAccept) "RP: ON" else "RP: OFF"
-            textSize = 12f
-            setTextColor(Color.BLACK)
-            gravity = Gravity.CENTER
+    private fun updateBubbleState(isActive: Boolean) {
+        bubbleView?.let { view ->
+            view.text = if (isActive) "RP\nON" else "RP\nOFF"
             val shape = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(if (prefs.autoAccept) Color.parseColor("#00E676") else Color.parseColor("#FF5252"))
-                setStroke(3, Color.WHITE)
+                setColor(if (isActive) Color.parseColor("#00E676") else Color.parseColor("#FF5252"))
+                setStroke(4, Color.WHITE)
             }
-            background = shape
+            view.background = shape
+        }
+    }
+
+    private fun createFloatingBubble() {
+        val density = resources.displayMetrics.density
+        val sizePx = (58 * density).toInt()
+
+        val textView = TextView(this).apply {
+            textSize = 11f
+            setTextColor(Color.BLACK)
+            gravity = Gravity.CENTER
+            setLineSpacing(0f, 0.9f)
         }
         bubbleView = textView
+        updateBubbleState(prefs.autoAccept)
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -52,15 +62,15 @@ class FloatingBubbleService : Service() {
         }
 
         val params = WindowManager.LayoutParams(
-            160,
-            160,
+            sizePx,
+            sizePx,
             layoutFlag,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = 50
-            y = 300
+            x = 40
+            y = 350
         }
 
         bubbleView?.setOnTouchListener(object : View.OnTouchListener {
@@ -94,9 +104,7 @@ class FloatingBubbleService : Service() {
                     MotionEvent.ACTION_UP -> {
                         if (isClick) {
                             prefs.autoAccept = !prefs.autoAccept
-                            textView.text = if (prefs.autoAccept) "RP: ON" else "RP: OFF"
-                            val shape = textView.background as GradientDrawable
-                            shape.setColor(if (prefs.autoAccept) Color.parseColor("#00E676") else Color.parseColor("#FF5252"))
+                            updateBubbleState(prefs.autoAccept)
                         }
                         return true
                     }
@@ -110,8 +118,6 @@ class FloatingBubbleService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (bubbleView != null) {
-            windowManager?.removeView(bubbleView)
-        }
+        bubbleView?.let { windowManager?.removeView(it) }
     }
 }

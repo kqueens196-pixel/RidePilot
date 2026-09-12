@@ -388,9 +388,19 @@ fun OrdersScreen(trips: List<AcceptedTrip>) {
 
 fun openUpiPayment(context: Context, amount: String, planName: String) {
     try {
-        val uri = Uri.parse("upi://pay?pa=ridepilot@upi&pn=RidePilot&tn=Subscription_" + planName + "&am=" + amount + "&cu=INR")
+        val uri = Uri.Builder()
+            .scheme("upi")
+            .authority("pay")
+            .appendQueryParameter("pa", "bharatpe.9020087455@fbpe") // Standard UPI VPA format
+            .appendQueryParameter("pn", "RidePilot Sub")
+            .appendQueryParameter("tn", "RidePilot " + planName + " Access")
+            .appendQueryParameter("am", amount)
+            .appendQueryParameter("cu", "INR")
+            .build()
         val intent = Intent(Intent.ACTION_VIEW, uri)
-        context.startActivity(Intent.createChooser(intent, "Pay with UPI"))
+        val chooser = Intent.createChooser(intent, "Select UPI App")
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
     } catch (_: Exception) {}
 }
 
