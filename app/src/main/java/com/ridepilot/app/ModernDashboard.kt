@@ -44,8 +44,8 @@ fun ModernDashboard(
             NavigationBar(containerColor = Color(0xFF0D1117)) {
                 val items = listOf(
                     Triple("Home", Icons.Default.Home, 0),
-                    Triple("Earnings", Icons.Default.AccountBalanceWallet, 1),
-                    Triple("Orders", Icons.Default.ListAlt, 2),
+                    Triple("Earnings", Icons.Default.Star, 1),
+                    Triple("Orders", Icons.Default.CheckCircle, 2),
                     Triple("Profile", Icons.Default.Person, 3)
                 )
                 items.forEach { (label, icon, index) ->
