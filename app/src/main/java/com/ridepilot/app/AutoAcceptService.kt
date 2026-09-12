@@ -22,6 +22,7 @@ class AutoAcceptService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (!isWithinDistance(rootInActiveWindow ?: return)) return
         if (event == null || !prefs.autoAccept || !prefs.isPremiumActive() || prefs.isBlocked) return
 
         val pkgName = event.packageName?.toString() ?: ""
@@ -143,4 +144,36 @@ class AutoAcceptService : AccessibilityService() {
     }
 
     override fun onInterrupt() {}
+
+    private fun isWithinDistance(rootNode: android.view.accessibility.AccessibilityNodeInfo): Boolean {
+        try {
+            val texts = mutableListOf<String>()
+            fun collect(node: android.view.accessibility.AccessibilityNodeInfo?) {
+                if (node == null) return
+                node.text?.let { texts.add(it.toString()) }
+                for (i in 0 until node.childCount) {
+                    collect(node.getChild(i))
+                }
+            }
+            collect(rootNode)
+            
+            val maxKm = prefs.maxPickupDistance
+            val kmRegex = Regex("([0-9]+(?:\.[0-9]+)?)\s*(?:km|kms)", RegexOption.IGNORE_CASE)
+            val mRegex = Regex("([0-9]+)\s*(?:m|mtr|meter|meters)", RegexOption.IGNORE_CASE)
+
+            for (t in texts) {
+                kmRegex.find(t)?.let {
+                    val km = it.groupValues[1].toFloatOrNull() ?: 0f
+                    if (km > maxKm) return false
+                }
+                mRegex.find(t)?.let {
+                    val meters = it.groupValues[1].toFloatOrNull() ?: 0f
+                    val inKm = meters / 1000f
+                    if (inKm > maxKm) return false
+                }
+            }
+        } catch (_: Exception) {}
+        return true
+    }
+
 }

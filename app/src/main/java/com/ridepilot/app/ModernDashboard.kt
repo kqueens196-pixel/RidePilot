@@ -251,12 +251,19 @@ fun HomeScreen(
                         Text("${String.format("%.1f", maxKm)} KM", color = Color(0xFF00E676), fontWeight = FontWeight.Bold)
                     }
                     Slider(
-                        value = maxKm,
-                        onValueChange = onMaxKmChange,
-                        valueRange = 0.5f..10.0f,
-                        steps = 18,
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color(0xFF00E676),
+                    value = pickupDistance,
+                    onValueChange = { 
+                        pickupDistance = it
+                        prefs.maxPickupDistance = it
+                    },
+                    valueRange = 0.2f..10.0f,
+                    steps = 48,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(0xFF00E676),
+                        activeTrackColor = Color(0xFF00E676),
+                        inactiveTrackColor = Color(0xFF21262D)
+                    )
+                ),
                             activeTrackColor = Color(0xFF00E676)
                         )
                     )

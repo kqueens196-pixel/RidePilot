@@ -144,4 +144,9 @@ class PreferencesManager(context: Context) {
         prefs.edit().putBoolean("is_logged_in", false).putString("user_phone", "").apply()
     }
 
+
+    var maxPickupDistance: Float
+        get() = prefs.getFloat("max_pickup_distance", 2.0f)
+        set(value) = prefs.edit().putFloat("max_pickup_distance", value).apply()
+
 }
