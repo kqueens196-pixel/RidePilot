@@ -4,6 +4,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 package com.ridepilot.app
 
+import android.widget.Toast
+import com.ridepilot.app.PreferencesManager
+import com.ridepilot.app.AdminActivity
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
