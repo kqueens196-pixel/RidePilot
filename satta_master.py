@@ -1,53 +1,40 @@
-# Multi-Layer Failure Recalibration Engine
+# Trending Consecutive & Cut Panel Matrix Engine
 
-CUT = {0: 5, 1: 6, 2: 7, 3: 8, 4: 9, 5: 0, 6: 1, 7: 2, 8: 3, 9: 4}
-
-PANEL_MATRIX = {
-    3: ["148", "256", "157"],
-    4: ["149", "239", "347"],
-    8: ["170", "260", "350"],
-    9: ["180", "270", "450"]
+TRENDING_CUT_PANELS = {
+    1: {"trend": "678", "cut": "123"},
+    2: {"trend": "345", "cut": "789"},
+    6: {"trend": "123", "cut": "678"},
+    7: {"trend": "234", "cut": "789"}
 }
 
-def execute_recalibrated_engine():
-    # Root Cause Fix: Diverted from simple sum-diff to 3-day diagonal mirror
-    otc = [3, 4, 8, 9]
+def execute_trending_cut_matrix():
+    otc = [1, 2, 6, 7]
 
     print("\n" + "="*65)
-    print("      SRIDEVI NIGHT: MULTI-LAYER RECALIBRATED AI ENGINE")
+    print("      SRIDEVI NIGHT: TRENDING CP & CONSECUTIVE ENGINE")
     print("="*65)
-    print("Failure Audit Status    : Over-reliance on 1-day Sum/Diff resolved.")
-    print("Activated Rule          : 3-Day Diagonal Mirror Line & Odd Step Recovery")
-    print("-" * 65)
-    print(f"LOCKED 4 OTC (OPEN-TO-CLOSE) : {otc}")
+    print("Audit Base              : 379 & 567 Cut-Family Expansion")
+    print(f"LOCKED 4 OTC            : {otc}")
     print("-" * 65)
 
-    print("TOP 10 CALIBRATED PANELS    :")
-    idx = 1
-    flat_panels = []
+    print("TRENDING PANELS & CUT PAIRS:")
     for ank in otc:
-        for p in PANEL_MATRIX[ank]:
-            flat_panels.append((ank, p))
-            print(f"  {idx:02d}. Ank [{ank}] -> Panel: {p}")
-            idx += 1
-            if idx > 10:
-                break
-        if idx > 10:
-            break
+        tp = TRENDING_CUT_PANELS[ank]["trend"]
+        cp = TRENDING_CUT_PANELS[ank]["cut"]
+        print(f"  Ank [{ank}] -> Trending: {tp}  |  Family Cut Panel: {cp}")
 
     print("-" * 65)
-    print("HIGH-CONFIDENCE JODIS       :")
-    print("  34    43    39    93    84    48    89    98")
+    print("LOCKED JODIS            : 26    71    (Backup: 12, 67)")
     print("-" * 65)
-    print("PRE-MARKET HALF SANGAM      :")
-    print("  148 x 4     170 x 9     3 x 239     8 x 180")
+    print("PRE-MARKET HALF SANGAM  :")
+    print("  345 x 6     234 x 1     2 x 123     7 x 678")
     print("-" * 65)
     print("PRE-MARKET FULL SANGAM (TOP 4):")
-    print(f"  1. {flat_panels[0][1]} x {flat_panels[3][1]}   (Jodi 34)")
-    print(f"  2. {flat_panels[6][1]} x {flat_panels[9][1]}   (Jodi 89)")
-    print(f"  3. {flat_panels[1][1]} x {flat_panels[5][1]}   (Jodi 34)")
-    print(f"  4. {flat_panels[7][1]} x {flat_panels[4][1]}   (Jodi 84)")
+    print("  1. 345 x 123   (Jodi 26)")
+    print("  2. 234 x 678   (Jodi 71)")
+    print("  3. 678 x 345   (Jodi 12)")
+    print("  4. 123 x 234   (Jodi 67)")
     print("="*65 + "\n")
 
 if __name__ == "__main__":
-    execute_recalibrated_engine()
+    execute_trending_cut_matrix()
